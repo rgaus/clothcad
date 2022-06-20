@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* FONTS */
+  --font-size: 14px;
+  --font-family: "Roboto Mono";
+  --font-weight-bold: bold;
+  --font-weight-medium: 500;
+  --font-weight-normal: normal;
+
+  /* BORDERS */
+  --border-radius-1: 0px;
+  --border-radius-2: 2px;
+  --border-radius-3: 4px;
+
+  /* SPACING */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+
+  /* COLORS */
+  --white: #ffffff;
+  --black: #000000;
+
+  --gray-1: #fafafa;
+  --gray-2: #f5f5f5;
+  --gray-3: #f0f0f0;
+  --gray-4: #d9d9d9;
+  --gray-5: #bfbfbf;
+  --gray-6: #8c8c8c;
+  --gray-7: #595959;
+  --gray-8: #434343;
+  --gray-9: #262626;
+  --gray-10: #1f1f1f;
+  --gray-11: #141414;
+
+  --cyan-1: #e6fffb;
+  --cyan-2: #b5f5ec;
+  --cyan-3: #87e8de;
+  --cyan-4: #5cdbd3;
+  --cyan-5: #36cfc9;
+  --cyan-6: #13c2c2;
+  --cyan-7: #08979c;
+  --cyan-8: #006d75;
+  --cyan-9: #00474f;
+  --cyan-10: #002329;
+
+  --red-1: #fff1f0;
+  --red-2: #ffccc7;
+  --red-3: #ffa39e;
+  --red-4: #ff7875;
+  --red-5: #ff4d4f;
+  --red-6: #f5222d;
+  --red-7: #cf1322;
+  --red-8: #a8071a;
+  --red-9: #820014;
+  --red-10: #5c0011;
+
+  --green-1: #f6ffed;
+  --green-2: #d9f7be;
+  --green-3: #b7eb8f;
+  --green-4: #95de64;
+  --green-5: #73d13d;
+  --green-6: #52c41a;
+  --green-7: #389e0d;
+  --green-8: #237804;
+  --green-9: #135200;
+  --green-10: #092b00;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+}
