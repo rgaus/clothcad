@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { parseSVG as parseSVGPath, makeAbsolute } from 'svg-path-parser';
 import { PlanarFace } from './planar-face';
 import { LinearFold } from './linear-fold';
 import {
@@ -7,16 +8,32 @@ import {
   SVGCoordinates,
 } from './coordinates';
 
+import { colorGeneratorFactory } from '$lib/color';
+
 export type Surface = {
   id: string;
   name: string;
   face: PlanarFace;
   folds: Array<LinearFold>;
+
+  colorFamily: string;
+  visible: boolean;
 };
+
+const generateColorFamily = colorGeneratorFactory();
 
 export const Surface = {
   create(face: PlanarFace, folds: Array<LinearFold> = []): Surface {
-    return { id: uuidv4(), name: 'Untitled Surface', face, folds };
+    const colorFamily = generateColorFamily();
+    return {
+      id: uuidv4(),
+      name: 'Untitled Surface',
+      face,
+      folds,
+
+      colorFamily,
+      visible: true,
+    };
   },
 
   createFromSVG(svgContents: string, selectWrapperElement: (svgDoc: Document) => Element) {
@@ -35,7 +52,6 @@ export const Surface = {
     let minY = parseFloat(rect.getAttribute('y') || '');
     let maxX = minX + parseFloat(rect.getAttribute('width') || '');
     let maxY = minY + parseFloat(rect.getAttribute('height') || '');
-    console.log(minX, minY, maxX, maxY)
 
     const face = PlanarFace.createRectangle((maxX - minX) * scale, (maxY - minY) * scale, {
       translation: SpacialCoordinates.create(minX * scale, minY * scale, 0),
@@ -71,9 +87,11 @@ export const Surface = {
     return Surface.create(face, folds);
   },
 
-  // Bisect a surface into two surfaces, based off of a fold.
+  // Bisect a surface into two surfaces, based off of a fold. Returns the original surface and the
+  // two new surfaces.
+  //
   // NOTE: the primary fold will not be in either returned surface
-  bisect(surface: Surface, primaryFold: LinearFold): [Surface, Surface] {
+  bisect(surface: Surface, primaryFold: LinearFold): [Surface, Surface, Surface] {
     // Bisect the underlying face
     const [faceA, faceB] = PlanarFace.bisect(surface.face, primaryFold.a, primaryFold.b);
 
@@ -158,13 +176,16 @@ export const Surface = {
 
     // console.log('FOLDS', surfaceAFolds, surfaceBFolds);
 
+    // Return original surface, only now hidden
+    const surfaceCopy = { ...surface, visible: false };
+
     const surfaceA = Surface.create(faceA, surfaceAFolds);
     surfaceA.name = `Bisect A of ${surface.name}`;
 
     const surfaceB = Surface.create(faceB, surfaceBFolds);
     surfaceB.name = `Bisect B of ${surface.name}`;
 
-    return [surfaceA, surfaceB];
+    return [surfaceCopy, surfaceA, surfaceB];
   },
 
   // Rotate a surface around a given fold
