@@ -193,6 +193,31 @@ const SurfaceStore = {
     const foldList = value.items.flatMap(surface => surface.folds.filter(fold => fold.id === foldId));
     return foldList.length > 0 ? foldList[0] : null;
   },
+  updateFold(value: SurfaceStoreState, foldId: LinearFold['id'], updater: Fold | (f: Fold) => Fold): SurfaceStoreState {
+    const items = value.items.map(surface => {
+      let hit = false;
+      const folds = surface.folds.map(fold => {
+        if (fold.id !== foldId) {
+          return fold;
+        }
+        hit = true;
+        if (typeof updater === 'function') {
+          return updater(fold);
+        } else {
+          // Here, `updater` is a fld instance
+          return updater;
+        }
+      });
+
+      if (!hit) {
+        return surface;
+      } else {
+        return { ...surface, folds };
+      }
+    });
+
+    return { ...value, items };
+  },
   getSurfacesContainingFold(value: SurfaceStoreState, foldId: LinearFold['id']): Array<Surface> {
     return value.items.filter(surface => typeof surface.folds.find(fold => fold.id === foldId) !== 'undefined');
   },

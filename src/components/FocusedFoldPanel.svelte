@@ -75,6 +75,9 @@
             const [surfaceA, surfaceB] = Surface.bisect(parentSurface, fold);
 
             // Ensure that surface ids and fold ids remain consistient as forwards / backwards is run
+            //
+            // FIXME: The fold part of ths isn't very robust. Ideally, this should be stored as a
+            // mapping from like underlying svg element to id
             if (context.surfaceAId && context.surfaceAFoldIds) {
               surfaceA.id = context.surfaceAId;
               surfaceA.folds = surfaceA.folds.map((fold, index) => ({
@@ -101,10 +104,15 @@
             value = SurfaceStore.updateItem(value, parentSurface.id, s => ({...s, visible: false}));
             value = SurfaceStore.addItem(value, surfaceA);
             value = SurfaceStore.addItem(value, surfaceB);
+            value = SurfaceStore.updateFold(value, foldId, f => ({
+              ...f,
+              surfaceAId: surfaceA.id,
+              surfaceBId: surfaceB.id,
+            }));
 
             return value;
           },
-          backwards: (value, [parentSurfaceId], context) => {
+          backwards: (value, [parentSurfaceId, foldId], context) => {
             if (!context.surfaceAId) {
               throw new Error(`context.surfaceAId is not set!`);
             }
@@ -124,6 +132,11 @@
             value = SurfaceStore.updateItem(value, parentSurfaceId, s => ({...s, visible: true}));
             value = SurfaceStore.removeItem(value, surfaceA.id);
             value = SurfaceStore.removeItem(value, surfaceB.id);
+            value = SurfaceStore.updateFold(value, foldId, f => ({
+              ...f,
+              surfaceAId: null,
+              surfaceBId: null,
+            }));
 
             return value;
           },
@@ -131,6 +144,64 @@
       }}>
         Split Surface
       </button>
+
+      <button on:click={() => {
+        SurfaceStore.createMutation({
+          forwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees], context) => {
+            const parentSurface = SurfaceStore.get(value, parentSurfaceId);
+            if (!parentSurface) {
+              throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
+            }
+
+            const fold = SurfaceStore.getFold(value, foldId);
+            if (!fold) {
+              throw new Error(`Cannot find fold with id ${foldId}`);
+            }
+
+            let surfaceToRotate = SurfaceStore.get(value, surfaceToRotateId);
+            if (!surfaceToRotate) {
+              throw new Error(`Cannot find surface with id ${surfaceToRotateId}`);
+            }
+
+            surfaceToRotate = Surface.rotate(
+              surfaceToRotate,
+              LinearFold.toSpacial(fold, parentSurface),
+              rotationInDegrees,
+            );
+
+            console.log('ROTATED', surfaceToRotate);
+
+            return SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
+          },
+          backwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees], context) => {
+            const parentSurface = SurfaceStore.get(value, parentSurfaceId);
+            if (!parentSurface) {
+              throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
+            }
+
+            const fold = SurfaceStore.getFold(value, foldId);
+            if (!fold) {
+              throw new Error(`Cannot find fold with id ${foldId}`);
+            }
+
+            let surfaceToRotate = SurfaceStore.get(value, surfaceToRotateId);
+            if (!surfaceToRotate) {
+              throw new Error(`Cannot find surface with id ${surfaceToRotateId}`);
+            }
+
+            surfaceToRotate = Surface.rotate(
+              surfaceToRotate,
+              LinearFold.toSpacial(fold, parentSurface),
+              -1 * rotationInDegrees,
+            );
+
+            return SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
+          },
+        })(associatedParentSurface.id, focusedFold.id, associatedSurfaceA.id, 45);
+      }}>
+        Fold
+      </button>
+
       <br />
       <br />
       <br />

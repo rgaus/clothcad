@@ -205,6 +205,6 @@ export const Surface = {
     //   );
     // });
 
-    return Surface.create(newFace, surface.folds);
+    return { ...surface, face: newFace };
   },
 };

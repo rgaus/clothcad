@@ -20,7 +20,13 @@
     const mapIter = canvas.$$.context.values();
     mapIter.next()
     ctx = mapIter.next().value;
-  })
+  });
+
+
+  let surfaceItems: Array<Surface> = [];
+  SurfaceStore.subscribe(value => {
+    surfaceItems = value.items;
+  });
 </script>
 
 <!--
@@ -40,13 +46,13 @@
 
   <SC.Primitive object={new THREE.AxesHelper(100)} />
 
-  {#each $SurfaceStore.items as surface (surface.id)}
+  {#each surfaceItems as surface}
     {#if surface.visible}
       <Plane
         face={surface.face}
         color={toRawHex(COLORS[surface.colorFamily][HighlightedItemStore.isHighlighted($HighlightedItemStore, "surface", surface.id) ? 'dark' : 'light'])}
       />
-      {#each surface.folds as fold (fold.id)}
+      {#each surface.folds as fold}
         <Line
           a={PlanarCoordinates.toSpacialCoordinates(fold.a, surface.face)}
           b={PlanarCoordinates.toSpacialCoordinates(fold.b, surface.face)}

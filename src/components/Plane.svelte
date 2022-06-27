@@ -49,6 +49,7 @@
     }
     return p.map(pt => new Vector3(pt.x, pt.y, pt.z));
   })();
+  console.log('POINTS', points);
 </script>
 
 <SC.Mesh
