@@ -20,6 +20,7 @@
   import Layout from '../components/Layout.svelte';
   import Treeview from '../components/Treeview.svelte';
   import FocusedSurfacePanel from '../components/FocusedSurfacePanel.svelte';
+  import FocusedFoldPanel from '../components/FocusedFoldPanel.svelte';
   import Viewport from '../components/Viewport.svelte';
 
   import { SurfaceStore, FocusedItemStore } from '$lib/stores';
@@ -53,17 +54,32 @@
         return rect;
       },
     );
-    const primaryFold = surface.folds[0];
-    [surface, surfaceA, surfaceB] = Surface.bisect(surface, primaryFold);
+    /* surface.visible = false; */
 
-    SurfaceStore.add(surface);
-    SurfaceStore.add(surfaceA);
-    SurfaceStore.add(surfaceB);
+    /* const primaryFold = surface.folds[0]; */
+    /* [surfaceA, surfaceB] = Surface.bisect(surface, primaryFold); */
+    /*  */
+    /* surfaceA = Surface.rotate(surfaceA, LinearFold.toSpacial(primaryFold, surface), 45); */
+    /*  */
+    /* primaryFold.surfaceAId = surfaceA.id; */
+    /* primaryFold.surfaceBId = surfaceB.id; */
+
+    SurfaceStore.createMutation({
+      forwards: value => {
+        value = SurfaceStore.addItem(value, surface);
+        /* value = SurfaceStore.addItem(value, surfaceA); */
+        /* value = SurfaceStore.addItem(value, surfaceB); */
+        return value;
+      },
+      backwards: () => {
+        surface && SurfaceStore.removeItem(surface);
+        /* surfaceA && SurfaceStore.removeItem(surfaceA); */
+        /* surfaceB && SurfaceStore.removeItem(surfaceB); */
+      },
+    })();
   });
   onDestroy(() => {
-    surface && SurfaceStore.remove(surface.id);
-    surfaceA && SurfaceStore.remove(surfaceA.id);
-    surfaceB && SurfaceStore.remove(surfaceB.id);
+    SurfaceStore.historyTo(0);
   });
 </script>
 
@@ -75,5 +91,6 @@
 
     <Treeview />
     <FocusedSurfacePanel />
+    <FocusedFoldPanel />
   </div>
 </Layout>

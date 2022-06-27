@@ -18,6 +18,7 @@ export type Surface = {
 
   colorFamily: string;
   visible: boolean;
+  parentId: Surface['id'] | null;
 };
 
 const generateColorFamily = colorGeneratorFactory();
@@ -33,6 +34,7 @@ export const Surface = {
 
       colorFamily,
       visible: true,
+      parent: null,
     };
   },
 
@@ -91,7 +93,7 @@ export const Surface = {
   // two new surfaces.
   //
   // NOTE: the primary fold will not be in either returned surface
-  bisect(surface: Surface, primaryFold: LinearFold): [Surface, Surface, Surface] {
+  bisect(surface: Surface, primaryFold: LinearFold): [Surface, Surface] {
     // Bisect the underlying face
     const [faceA, faceB] = PlanarFace.bisect(surface.face, primaryFold.a, primaryFold.b);
 
@@ -177,15 +179,16 @@ export const Surface = {
     // console.log('FOLDS', surfaceAFolds, surfaceBFolds);
 
     // Return original surface, only now hidden
-    const surfaceCopy = { ...surface, visible: false };
 
     const surfaceA = Surface.create(faceA, surfaceAFolds);
     surfaceA.name = `Bisect A of ${surface.name}`;
+    surfaceA.parentId = surface.id;
 
     const surfaceB = Surface.create(faceB, surfaceBFolds);
     surfaceB.name = `Bisect B of ${surface.name}`;
+    surfaceA.parentId = surface.id;
 
-    return [surfaceCopy, surfaceA, surfaceB];
+    return [surfaceA, surfaceB];
   },
 
   // Rotate a surface around a given fold

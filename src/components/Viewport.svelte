@@ -46,14 +46,14 @@
         face={surface.face}
         color={toRawHex(COLORS[surface.colorFamily][HighlightedItemStore.isHighlighted($HighlightedItemStore, "surface", surface.id) ? 'dark' : 'light'])}
       />
+      {#each surface.folds as fold (fold.id)}
+        <Line
+          a={PlanarCoordinates.toSpacialCoordinates(fold.a, surface.face)}
+          b={PlanarCoordinates.toSpacialCoordinates(fold.b, surface.face)}
+          color={HighlightedItemStore.isHighlighted($HighlightedItemStore, "fold", fold.id) ?
+          toRawHex(Cyan4) : toRawHex(COLORS[surface.colorFamily].dark)}
+        />
+      {/each}
     {/if}
-    {#each surface.folds as fold (fold.id)}
-      <Line
-        a={PlanarCoordinates.toSpacialCoordinates(fold.a, surface.face)}
-        b={PlanarCoordinates.toSpacialCoordinates(fold.b, surface.face)}
-        color={HighlightedItemStore.isHighlighted($HighlightedItemStore, "fold", fold.id) ?
-        toRawHex(Cyan4) : toRawHex(COLORS[surface.colorFamily].dark)}
-      />
-    {/each}
   {/each}
 </SC.Canvas>

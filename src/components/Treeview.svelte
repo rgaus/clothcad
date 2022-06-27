@@ -6,9 +6,15 @@
 
   import Panel from './Panel.svelte';
 
-  type TabItem = 'drawings' | 'surfaces' | 'folds';
+  type TabItem = 'drawing' | 'surface' | 'fold';
 
-  let activeTab: TabItem = 'surfaces';
+  let activeTab: TabItem = 'surface';
+
+  FocusedItemStore.subscribe(focusedItem => {
+    if (focusedItem && focusedItem.itemType !== activeTab) {
+      activeTab = focusedItem.itemType;
+    }
+  });
 </script>
 
 <style>
@@ -69,6 +75,7 @@
     user-select: none;
     border-radius: var(--border-radius-2);
     font-weight: var(--font-weight-medium);
+    margin-bottom: var(--space-1);
   }
   .item.highlighted, .item:active {
     background-color: var(--gray-8);
@@ -77,7 +84,7 @@
     background-color: var(--cyan-8);
   }
   .item.fold {
-    padding-left: var(--space-4);
+    padding-left: var(--space-1);
   }
 
   .icon {
@@ -118,25 +125,27 @@
 </style>
 
 <Panel width="300px" height="100%">
+  <button on:click={() => SurfaceStore.historyUndo()}>Undo</button>
+  <button on:click={() => SurfaceStore.historyRedo()}>Redo</button>
   <div class="wrapper">
     <div class="tabrow">
       <button
         class="tab"
-        class:active={activeTab === "drawings"}
-        on:click={() => { activeTab = "drawings"; }}
+        class:active={activeTab === "drawing"}
+        on:click={() => { activeTab = "drawing"; }}
       >Drawings</button>
       <button
         class="tab"
-        class:active={activeTab === "surfaces"}
-        on:click={() => { activeTab = "surfaces"; }}
+        class:active={activeTab === "surface"}
+        on:click={() => { activeTab = "surface"; }}
       >Surfaces</button>
       <button
         class="tab"
-        class:active={activeTab === "folds"}
-        on:click={() => { activeTab = "folds"; }}
+        class:active={activeTab === "fold"}
+        on:click={() => { activeTab = "fold"; }}
       >Folds</button>
     </div>
-    {#if activeTab === "surfaces"}
+    {#if activeTab === "surface"}
       <ul class="list">
         {#each $SurfaceStore.items as surface (surface.id)}
           <li
@@ -163,12 +172,26 @@
                 e.preventDefault();
                 e.stopPropagation();
 
-                SurfaceStore.update(surface.id, surface => {
-                  return {
-                    ...surface,
-                    visible: !surface.visible,
-                  };
-                });
+                const initialSurfaceVisibility = surface.visible;
+
+                SurfaceStore.createMutation({
+                  forwards: (value, [surfaceId]) => {
+                    return SurfaceStore.updateItem(value, surfaceId, surface => {
+                      return {
+                        ...surface,
+                        visible: !initialSurfaceVisibility,
+                      };
+                    });
+                  },
+                  backwards: (value, [surfaceId]) => {
+                    return SurfaceStore.updateItem(value, surfaceId, surface => {
+                      return {
+                        ...surface,
+                        visible: initialSurfaceVisibility,
+                      };
+                    });
+                  },
+                })(surface.id);
               }}
             >
               <svg
@@ -194,40 +217,53 @@
               {surface.name}
             </div>
           </li>
-          {#each surface.folds as fold (fold.id)}
-            <li
-              class="item fold"
-              class:highlighted={HighlightedItemStore.isHighlighted(
-                $HighlightedItemStore,
-                "fold",
-                fold.id,
-              )}
-              on:mouseenter={() => HighlightedItemStore.enterItem("fold", fold.id)}
-              on:mouseleave={() => HighlightedItemStore.leaveItem()}
-              on:click={() => FocusedItemStore.focusItem("fold", fold.id)}
-            >
-              <svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1"
-              xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="icon fold">
-                <!-- Generator: Sketch 57.1 (83088) - https://sketch.com -->
-                <title>Artboard Copy</title>
-                <desc>Created with Sketch.</desc>
-                <g id="Artboard-Copy" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-                    <circle id="Oval" stroke="currentColor" cx="12" cy="12" r="5.5"></circle>
-                    <text id="F" font-family="PTMono-Bold, PT Mono" font-size="8" font-weight="bold" fill="currentColor">
-                        <tspan x="9.75" y="15">F</tspan>
-                    </text>
-                    <path d="M17.5678441,14.2401378 L22.4514762,17.3994636 L21.3753606,19.0597117
-                    L16.5308784,15.9334766 C16.9644265,15.4345112 17.3169155,14.8632311
-                    17.5678441,14.2401378 Z M3.59118986,5.2 L7.67525411,7.84107482 C7.21298563,8.32165737
-                    6.83006038,8.87911253 6.54755231,9.49236635 L2.5,6.88110527 L3.59118986,5.2 Z"
-                    id="Combined-Shape" fill="currentColor"></path>
-                </g>
-              </svg>
-              <div class="label">
-                {fold.id}
-              </div>
-            </li>
-          {/each}
+        {/each}
+      </ul>
+    {/if}
+    {#if activeTab === "fold"}
+      <ul class="list">
+        {#each $SurfaceStore.items as surface (surface.id)}
+          {#if surface.visible}
+            {#each surface.folds as fold (fold.id)}
+              <li
+                class="item fold"
+                class:highlighted={HighlightedItemStore.isHighlighted(
+                  $HighlightedItemStore,
+                  "fold",
+                  fold.id,
+                )}
+                class:focused={FocusedItemStore.isFocused(
+                  $FocusedItemStore,
+                  "fold",
+                  fold.id,
+                )}
+                on:mouseenter={() => HighlightedItemStore.enterItem("fold", fold.id)}
+                on:mouseleave={() => HighlightedItemStore.leaveItem()}
+                on:click={() => FocusedItemStore.focusItem("fold", fold.id)}
+              >
+                <svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1"
+                xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="icon fold">
+                  <!-- Generator: Sketch 57.1 (83088) - https://sketch.com -->
+                  <title>Artboard Copy</title>
+                  <desc>Created with Sketch.</desc>
+                  <g id="Artboard-Copy" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                      <circle id="Oval" stroke="currentColor" cx="12" cy="12" r="5.5"></circle>
+                      <text id="F" font-family="PTMono-Bold, PT Mono" font-size="8" font-weight="bold" fill="currentColor">
+                          <tspan x="9.75" y="15">F</tspan>
+                      </text>
+                      <path d="M17.5678441,14.2401378 L22.4514762,17.3994636 L21.3753606,19.0597117
+                      L16.5308784,15.9334766 C16.9644265,15.4345112 17.3169155,14.8632311
+                      17.5678441,14.2401378 Z M3.59118986,5.2 L7.67525411,7.84107482 C7.21298563,8.32165737
+                      6.83006038,8.87911253 6.54755231,9.49236635 L2.5,6.88110527 L3.59118986,5.2 Z"
+                      id="Combined-Shape" fill="currentColor"></path>
+                  </g>
+                </svg>
+                <div class="label">
+                  {fold.id}
+                </div>
+              </li>
+            {/each}
+          {/if}
         {/each}
       </ul>
     {/if}

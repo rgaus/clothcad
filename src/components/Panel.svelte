@@ -26,7 +26,7 @@
   }
 </style>
 
-<div class="panelWrapper" style:top={top} style:left={left} style:width={width}>
+<div class="panelWrapper" style:top={top} style:left={left} style:width={width} on:mousedown={e => e.stopPropagation()}>
   <div class="panel" style:height={height}>
     <slot />
   </div>

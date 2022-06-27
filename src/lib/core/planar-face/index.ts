@@ -378,6 +378,7 @@ export const PlanarFace = {
 
           // console.log('RIGHTPUSH', intersectionPoint)
           pushIfNew(rightPoints, intersectionPoint);
+          pushIfNew(rightPoints, pointB);
         } else {
           // console.log('RIGHTPUSH', pointA, intersectionPoint)
           pushIfNew(rightPoints, pointA);
@@ -385,6 +386,7 @@ export const PlanarFace = {
 
           // console.log('LEFTPUSH', intersectionPoint)
           pushIfNew(leftPoints, intersectionPoint);
+          pushIfNew(leftPoints, pointB);
         }
       } else {
         if (pointOnLeft) {

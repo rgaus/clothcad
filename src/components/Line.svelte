@@ -14,11 +14,11 @@
     // ref: https://stackoverflow.com/questions/15316127/three-js-line-vector-to-cylinder
     const pointX = new Vector3(a.x, a.y, a.z), pointY = new Vector3(b.x, b.y, b.z);
     const direction = new Vector3().subVectors( pointY, pointX );
-    $: length = direction.length();
-    $: position = new Vector3().addVectors( pointX, direction.multiplyScalar(0.5) );
+    length = direction.length();
+    position = new Vector3().addVectors( pointX, direction.multiplyScalar(0.5) );
 
     const arrow = new ArrowHelper(direction.normalize(), pointX);
-    $: rotation = arrow.rotation.clone();
+    rotation = arrow.rotation.clone();
   });
 </script>
 
