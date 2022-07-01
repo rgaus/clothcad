@@ -123,6 +123,9 @@
 
               return SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
             },
+            requireFreshlyCreated: (args, context) => [
+              { itemType: 'surface', itemId: args[2] },
+            ],
           })(focusedSurface.parentId, focusedFoldId, focusedSurface.id, focusedFoldAngle);
         }}>Go</button>
       {/if}
@@ -210,10 +213,6 @@
 
             return value;
           },
-          requires: (args, context) => [
-            { itemType: 'surface', itemId: context.surfaceAId },
-            { itemType: 'surface', itemId: context.surfaceBId },
-          ],
         })(focusedSurface.id, focusedFoldId);
       }}>Split</button>
 

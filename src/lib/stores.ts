@@ -56,11 +56,12 @@ function createCollectionStore<T extends {id: string}, U extends { items: Array<
 type SurfaceHistoryContext = object;
 
 type SurfaceHistoryListItem = {
+  updatedAt: string;
   forwards: (value: SurfaceStoreState, context: SurfaceHistoryContext) => SurfaceStoreState;
   backwards: (value: SurfaceStoreState, context: SurfaceHistoryContext) => SurfaceStoreState;
   args: Array<any>;
   context?: SurfaceHistoryContext;
-  requires?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
+  requireFreshlyCreated?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
 };
 
 type SurfaceStoreState = {
@@ -76,21 +77,83 @@ const SurfaceStore = {
     currentHistoryIndex: -1,
   }),
 
-  createMutation(historyItem: SurfaceHistoryListItem) {
+  createMutation(historyItem: Omit<SurfaceHistoryListItem, 'updatedAt'>) {
     return (...args) => {
       SurfaceStore.update(value => {
         historyItem.args = args;
         historyItem.context = historyItem.context || {};
-        const newValue = historyItem.forwards(value, historyItem.args, historyItem.context);
-        if (typeof newValue === 'undefined') {
+        historyItem.updatedAt = new Date().toISOString();
+
+        const originalValue = value;
+
+        // Requirements allow a mutation to define what must be newly created before the mutation
+        // can run
+        const requirements = historyItem.requireFreshlyCreated ? historyItem.requireFreshlyCreated(historyItem.args, historyItem.context) : [];
+        let historyIndexSteppedBackwardsTo = value.currentHistoryIndex + 1;
+        if (requirements.length > 0) {
+          let previousValue = value;
+
+          // Go backwards until the requirements are no longer met
+          for (let index = value.currentHistoryIndex; index >= 0; index -= 1) {
+            const historyItem = value.history[index];
+
+            previousValue = value;
+            value = historyItem.backwards(value, historyItem.args, historyItem.context);
+
+            const allRequirementsMet = requirements.every(({itemType, itemId}) => {
+              switch (itemType) {
+                case 'surface':
+                  return SurfaceStore.get(value, itemId) !== null;
+                case 'fold':
+                  return SurfaceStore.getFold(value, itemId) !== null;
+                default:
+                  throw new Error(`Unknown requirement with itemType ${itemType}!`);
+              }
+            });
+            if (!allRequirementsMet) {
+              // Ok! We're finally done going back
+              // The "previous value" now becomes the value we care about going forward
+              value = previousValue;
+              // Also update a few variables that are set to their "next" values to reset them to
+              // the previous values
+              historyIndexSteppedBackwardsTo = index + 1;
+              break;
+            }
+          }
+        }
+        console.log('NOW AT', originalValue, historyIndexSteppedBackwardsTo);
+
+        // Migrate the state forwards with the current history item
+        value = historyItem.forwards(value, historyItem.args, historyItem.context);
+        if (typeof value === 'undefined') {
           throw new Error("`undefined` was returned from mutation forwards function, this isn't allowed!");
         }
 
-        const newCurrentHistoryIndex = newValue.currentHistoryIndex + 1;
-        const newHistory = newValue.history.slice(0, newCurrentHistoryIndex);
+        const newCurrentHistoryIndex = originalValue.currentHistoryIndex + 1;
+
+        // If there were requirements, now step forward again to reapply history that was previously
+        // inverted
+        if (requirements.length > 0) {
+          for (
+            let index = historyIndexSteppedBackwardsTo;
+            index < newCurrentHistoryIndex;
+            index += 1
+          ) {
+            const historyItem = value.history[index];
+            value = historyItem.forwards(value, historyItem.args, historyItem.context);
+          }
+        }
+
+        // Insert the new history item in the right place
+        const newHistory = [
+          ...value.history.slice(0, historyIndexSteppedBackwardsTo),
+          historyItem,
+          ...value.history.slice(historyIndexSteppedBackwardsTo),
+        ];
+        console.log('NEW HISORY', newHistory);
         return {
-          ...newValue,
-          history: [...newHistory, historyItem],
+          ...value,
+          history: newHistory,
           currentHistoryIndex: newCurrentHistoryIndex,
         };
       });
