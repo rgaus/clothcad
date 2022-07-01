@@ -10,7 +10,7 @@
       oldValue = value;
     }
   }
-  $: valueStringInvalid = !/^[0-9]+(\.[0-9]*)?$/.test(valueString);
+  $: valueStringInvalid = !/^-?[0-9]+(\.[0-9]*)?$/.test(valueString);
 
   function normalizeAngle(angle: number): number {
     while (angle < 0) {
@@ -131,6 +131,7 @@ const DRAG_DEGREES_PER_PIXEL = 0.5;
         return;
       }
       value = parseFloat(valueString);
+      console.log(value)
     }}
   />
   <div
