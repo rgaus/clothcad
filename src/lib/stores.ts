@@ -60,6 +60,7 @@ type SurfaceHistoryListItem = {
   backwards: (value: SurfaceStoreState, context: SurfaceHistoryContext) => SurfaceStoreState;
   args: Array<any>;
   context?: SurfaceHistoryContext;
+  requires?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
 };
 
 type SurfaceStoreState = {
@@ -98,7 +99,7 @@ const SurfaceStore = {
 
   historyGo(amount: number, absolute=false) {
     return SurfaceStore.update(value => {
-      console.log('START VALUE', value);
+      // console.log('START VALUE', value);
       // If "absolute" is turned on, then this should be an absolute move
       if (absolute) {
         amount = amount - value.currentHistoryIndex;
@@ -117,7 +118,7 @@ const SurfaceStore = {
         startIndex += 1;
       }
 
-      console.log('INDEXES', startIndex, endIndex);
+      // console.log('INDEXES', startIndex, endIndex);
 
       for (
         let index = startIndex;
@@ -126,13 +127,13 @@ const SurfaceStore = {
       ) {
         const historyItem = value.history[index];
         if (movingForwards) {
-          console.log('RUNNING FORWARDS', index);
+          // console.log('RUNNING FORWARDS', index);
           value = historyItem.forwards(value, historyItem.args, historyItem.context);
           if (!value) {
             throw new Error("`undefined` was returned from mutation forwards function, this isn't allowed!");
           }
         } else {
-          console.log('RUNNING BACKWARDS', index);
+          // console.log('RUNNING BACKWARDS', index);
           value = historyItem.backwards(value, historyItem.args, historyItem.context);
           if (!value) {
             throw new Error("`undefined` was returned from mutation backwards function, this isn't allowed!");
@@ -141,7 +142,7 @@ const SurfaceStore = {
       }
 
       value = { ...value, currentHistoryIndex: endIndex };
-      console.log('END VALUE', value);
+      // console.log('END VALUE', value);
       return value;
     });
   },
@@ -226,9 +227,18 @@ const SurfaceStore = {
 
 
 
-type Item =
+export type Item =
   | { itemType: 'surface'; itemId: Surface['id'] }
   | { itemType: 'fold'; itemId: LinearFold['id'] };
+
+export const Item = {
+  surface(itemId: Surface['id']): Item {
+    return { itemType: 'surface', itemId };
+  },
+  fold(itemId: Fold['id']): Item {
+    return { itemType: 'fold', itemId };
+  },
+};
 
 const HighlightedItemStore = {
   ...writable<Item | null>(null),
@@ -282,5 +292,74 @@ const FocusedItemStore = {
   },
 };
 
+const PickingItemStore = {
+  ...writable<{
+    enabled: true,
+    itemType: Item['itemType'],
+    resolve: (item: Item) => void;
+  } | { enabled: false }>({enabled: false}),
 
-export { SurfaceStore, HighlightedItemStore, FocusedItemStore };
+  pickFold: (focusedItemState: Item | null, parentSurface: Surface) => {
+    return new Promise<LinearFold['id']>(resolve => {
+      // Clear the focused item
+      FocusedItemStore.blurItem();
+
+      // Make the one surface in question visible and hide all other surfaces
+      let surfaceStoreState: SurfaceStoreState;
+      SurfaceStore.update(value => {
+        surfaceStoreState = value;
+
+        return {
+          ...value,
+          items: value.items.map(surface => ({...surface, visible: surface.id === parentSurface.id})),
+        };
+      });
+
+      FocusedItemStore.subscribe(value => {
+        if (value && value.itemType === 'fold') {
+          // Make sure the fold is being selected from the right surface
+          const surfaces = SurfaceStore.getSurfacesContainingFold(surfaceStoreState, value.itemId);
+          if (surfaces.map(s => s.id).includes(parentSurface.id)) {
+            PickingItemStore.set({ enabled: false });
+
+            // Restore surface state
+            SurfaceStore.set(surfaceStoreState);
+
+            // Restore the focused item
+            FocusedItemStore.set(focusedItemState);
+            resolve(value.itemId);
+          }
+        };
+      });
+
+      PickingItemStore.set({
+        enabled: true,
+        itemType: 'fold',
+      });
+    });
+  },
+
+  pickSurface: (focusedItemState: Item | null) => {
+    return new Promise<Surface['id']>(resolve => {
+      // Clear the focused item
+      FocusedItemStore.blurItem();
+
+      FocusedItemStore.subscribe(value => {
+        if (value && value.itemType === 'surface') {
+          PickingItemStore.set({ enabled: false });
+          // Restore the focused item
+          FocusedItemStore.set(focusedItemState);
+          resolve(value);
+        };
+      });
+
+      PickingItemStore.set({
+        enabled: true,
+        itemType: 'surface',
+      });
+    });
+  },
+};
+
+
+export { SurfaceStore, HighlightedItemStore, FocusedItemStore, PickingItemStore };

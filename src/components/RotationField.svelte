@@ -42,7 +42,7 @@ const DRAG_DEGREES_PER_PIXEL = 0.5;
       deltaInDegrees *= -1;
     }
 
-    value = Math.round(initialValue + deltaInDegrees);
+    value = normalizeAngle(Math.round(initialValue + deltaInDegrees));
   }
   function onMouseUp() {
     window.removeEventListener('mousemove', onMouseMove);

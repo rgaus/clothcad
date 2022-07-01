@@ -186,7 +186,7 @@ export const Surface = {
 
     const surfaceB = Surface.create(faceB, surfaceBFolds);
     surfaceB.name = `Bisect B of ${surface.name}`;
-    surfaceA.parentId = surface.id;
+    surfaceB.parentId = surface.id;
 
     return [surfaceA, surfaceB];
   },
@@ -194,6 +194,13 @@ export const Surface = {
   // Rotate a surface around a given fold
   rotate(surface: Surface, primaryFoldLine: [SpacialCoordinates, SpacialCoordinates], angleInDegrees: number): Surface {
     const newFace = PlanarFace.rotate(surface.face, primaryFoldLine, angleInDegrees);
+
+    while (angleInDegrees > 360) {
+      angleInDegrees -= 360;
+    }
+    while (angleInDegrees < 0) {
+      angleInDegrees += 360;
+    }
 
     // // Translate all folds within the newly rotated face because the (0, 0) of the new face could
     // // be different (if the rotation didn't happen around an axis that the origin is part of)

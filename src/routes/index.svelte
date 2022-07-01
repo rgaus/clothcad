@@ -64,19 +64,24 @@
     /* primaryFold.surfaceAId = surfaceA.id; */
     /* primaryFold.surfaceBId = surfaceB.id; */
 
-    SurfaceStore.createMutation({
-      forwards: value => {
-        value = SurfaceStore.addItem(value, surface);
-        /* value = SurfaceStore.addItem(value, surfaceA); */
-        /* value = SurfaceStore.addItem(value, surfaceB); */
-        return value;
-      },
-      backwards: () => {
-        surface && SurfaceStore.removeItem(surface);
-        /* surfaceA && SurfaceStore.removeItem(surfaceA); */
-        /* surfaceB && SurfaceStore.removeItem(surfaceB); */
-      },
-    })();
+    if ($SurfaceStore.items.length === 0) {
+      SurfaceStore.createMutation({
+        forwards: value => {
+          value = SurfaceStore.addItem(value, surface);
+          /* value = SurfaceStore.addItem(value, surfaceA); */
+          /* value = SurfaceStore.addItem(value, surfaceB); */
+          return value;
+        },
+        backwards: value => {
+          if (surface) {
+            value = SurfaceStore.removeItem(value, surface.id);
+          }
+          /* surfaceA && SurfaceStore.removeItem(surfaceA); */
+          /* surfaceB && SurfaceStore.removeItem(surfaceB); */
+          return value;
+        },
+      })();
+    }
   });
   onDestroy(() => {
     SurfaceStore.historyTo(0);
@@ -86,11 +91,11 @@
 <svelte:window on:mousedown={() => FocusedItemStore.blurItem()} />
 
 <Layout>
-  <div slot="main">
+  <svelte:fragment slot="main">
     <Viewport />
 
     <Treeview />
     <FocusedSurfacePanel />
     <FocusedFoldPanel />
-  </div>
+  </svelte:fragment>
 </Layout>

@@ -12,6 +12,7 @@ import {
   spacialDistance,
   POINT_IN_POLYGON,
 } from '../utils';
+import { distanceToPolygon } from 'distance-to-polygon/lib/distance-to-polygon.js';
 
 import type { PlanarFace as PlanarFaceDefinition } from './definition';
 
@@ -142,10 +143,15 @@ export const PlanarFace = {
       );
     });
 
-    const newMatrix = new Matrix4().multiplyMatrices(matrix, face.matrix);
+    // Convert the origin in a similar fashion as the other points
+    const result = (new Vector3(0, 0, 0)).applyMatrix4(matrix);
+    const newOrigin = SpacialCoordinates.create(
+      result.x + origin.x,
+      result.y + origin.y,
+      result.z + origin.z,
+    );
 
-    // Get the point closest to (0, 0, 0) and call that the origin
-    const newOrigin = computeFaceOrigin(newPoints);
+    const newMatrix = new Matrix4().multiplyMatrices(matrix, face.matrix);
 
     const newFace = PlanarFace.create(
       newPoints,
@@ -310,11 +316,9 @@ export const PlanarFace = {
 
     // NOTE: it's possible for the intersection point to be outside the polygon, if so, it doesn't
     // count
-    //
-    // WHen calculating, round all values. Some of the weird floating point precision issues can lead
-    // to false positives.
-    const convertedPoints = face.points.map(p => PlanarCoordinates.round(SpacialCoordinates.toPlanarCoordinates(p, face)), 3);
-    if (pointInPolygon(convertedPoints, PlanarCoordinates.round(intersectionPoint, 3)) === POINT_IN_POLYGON.OUTSIDE) {
+    const convertedPoints = face.points.map(p => SpacialCoordinates.toPlanarCoordinates(p, face));
+    const result = pointInPolygon(convertedPoints, intersectionPoint);
+    if (result === POINT_IN_POLYGON.OUTSIDE) {
       return null;
     }
 
@@ -341,12 +345,30 @@ export const PlanarFace = {
       ) > 0;
     };
 
+    console.log('lines', PlanarFace.calculatePerimeterLineSegments(face));
+
     // Loop through each perimeter line segment of the face
     for (let [pointA, pointB] of PlanarFace.calculatePerimeterLineSegments(face)) {
       const pointOnLeft = calculateLineSide(pointA);
-      // console.log('PT', pointA, pointB);
 
-      let intersectionPoint = PlanarFace.intersection(face, [pointA, pointB], bisectLine);
+      // NOTE: this is not using PlanarFace.intersection. It turns out that the point in polygon
+      // test has some edge cases that cause weird floating point rounding to mess with. A better
+      // test that accomplishes something similar is calculating the distance to the polygon and
+      // making sure that it's tiny.
+      let intersectionPoint = intersection([pointA, pointB], bisectLine);
+      if (intersectionPoint) {
+        const convertedPoints = face.points.map(p => SpacialCoordinates.toPlanarCoordinates(p, face));
+        const resultb = distanceToPolygon(
+          [intersectionPoint.x, intersectionPoint.y],
+          convertedPoints.map(p => [p.x, p.y]),
+          n => n,
+        );
+        if (resultb > 0.001) {
+          intersectionPoint = null;
+        }
+      }
+
+      console.log('PT', [pointA, pointB], bisectLine, intersectionPoint);
 
       // Push a new item onto the end of an array if the last item of the array doesn't equal that
       // item already
@@ -406,6 +428,9 @@ export const PlanarFace = {
     if (rightPoints[0].x === rightPoints[rightPoints.length-1].x && rightPoints[0].y === rightPoints[rightPoints.length-1].y) {
       rightPoints.splice(rightPoints.length-1, 1);
     }
+
+    console.log('INPUT', PlanarFace.calculatePerimeterLineSegments(face));
+    console.log('RESULT', leftPoints, rightPoints);
 
     const leftPointsSpacial = leftPoints.map(p => PlanarCoordinates.toSpacialCoordinates(p, face));
     const rightPointsSpacial = rightPoints.map(p => PlanarCoordinates.toSpacialCoordinates(p, face));
