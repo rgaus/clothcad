@@ -18,12 +18,13 @@
     round,
   } from '$lib/core'
   import Layout from '../components/Layout.svelte';
+  import AppBar from '../components/AppBar.svelte';
   import Treeview from '../components/Treeview.svelte';
   import FocusedSurfacePanel from '../components/FocusedSurfacePanel.svelte';
   import FocusedFoldPanel from '../components/FocusedFoldPanel.svelte';
   import Viewport from '../components/Viewport.svelte';
 
-  import { SurfaceStore, FocusedItemStore } from '$lib/stores';
+  import { SurfaceStore, PickingItemStore, FocusedItemStore } from '$lib/stores';
 
   let surface: Surface, surfaceA: Surface, surfaceB: Surface;
 
@@ -92,6 +93,15 @@
 
 <Layout>
   <svelte:fragment slot="main">
+    {#if $PickingItemStore.enabled}
+      <AppBar fixed>
+        <span slot="title">Pick {$PickingItemStore.itemType}</span>
+        <span slot="actions">
+          <button on:click={() => PickingItemStore.cancel($PickingItemStore)}>Cancel</button>
+        </span>
+      </AppBar>
+    {/if}
+
     <Viewport />
 
     <Treeview />

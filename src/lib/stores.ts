@@ -355,12 +355,19 @@ const FocusedItemStore = {
   },
 };
 
+type PickingItemStoreEnabledState = {
+  enabled: true,
+  itemType: Item['itemType'],
+  resolve: (item: Item) => void;
+  cancel: () => void;
+};
+type PickingItemStoreDisabledState = {
+  enabled: false,
+};
+type PickingItemStoreState = PickingItemStoreEnabledState | PickingItemStoreDisabledState;
+
 const PickingItemStore = {
-  ...writable<{
-    enabled: true,
-    itemType: Item['itemType'],
-    resolve: (item: Item) => void;
-  } | { enabled: false }>({enabled: false}),
+  ...writable<PickingItemStoreState>({enabled: false}),
 
   pickFold: (focusedItemState: Item | null, parentSurface: Surface) => {
     return new Promise<LinearFold['id']>(resolve => {
@@ -378,18 +385,22 @@ const PickingItemStore = {
         };
       });
 
+      const cancel = () => {
+        PickingItemStore.set({ enabled: false });
+
+        // Restore surface state
+        SurfaceStore.set(surfaceStoreState);
+
+        // Restore the focused item
+        FocusedItemStore.set(focusedItemState);
+      };
+
       FocusedItemStore.subscribe(value => {
         if (value && value.itemType === 'fold') {
           // Make sure the fold is being selected from the right surface
           const surfaces = SurfaceStore.getSurfacesContainingFold(surfaceStoreState, value.itemId);
           if (surfaces.map(s => s.id).includes(parentSurface.id)) {
-            PickingItemStore.set({ enabled: false });
-
-            // Restore surface state
-            SurfaceStore.set(surfaceStoreState);
-
-            // Restore the focused item
-            FocusedItemStore.set(focusedItemState);
+            cancel();
             resolve(value.itemId);
           }
         };
@@ -398,6 +409,7 @@ const PickingItemStore = {
       PickingItemStore.set({
         enabled: true,
         itemType: 'fold',
+        cancel,
       });
     });
   },
@@ -407,11 +419,17 @@ const PickingItemStore = {
       // Clear the focused item
       FocusedItemStore.blurItem();
 
+      const cancel = () => {
+        PickingItemStore.set({ enabled: false });
+
+        // Restore the focused item
+        FocusedItemStore.set(focusedItemState);
+      };
+
       FocusedItemStore.subscribe(value => {
         if (value && value.itemType === 'surface') {
           PickingItemStore.set({ enabled: false });
-          // Restore the focused item
-          FocusedItemStore.set(focusedItemState);
+          cancel();
           resolve(value);
         };
       });
@@ -419,8 +437,16 @@ const PickingItemStore = {
       PickingItemStore.set({
         enabled: true,
         itemType: 'surface',
+        cancel,
       });
     });
+  },
+
+  cancel: (value: PickingItemStoreState) => {
+    if (!value.enabled) {
+      return;
+    }
+    value.cancel();
   },
 };
 

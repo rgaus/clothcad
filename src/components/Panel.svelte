@@ -3,6 +3,7 @@
   export let left: number = 0;
   export let height: string;
   export let width: string = "300px";
+  export let hidden: boolean = false;
 </script>
 
 <style>
@@ -24,10 +25,14 @@
     overflow-y: auto;
     pointer-events: auto;
   }
+  .panel.hidden {
+    pointer-events: none;
+    opacity: 0.05;
+  }
 </style>
 
 <div class="panelWrapper" style:top={top} style:left={left} style:width={width} on:mousedown={e => e.stopPropagation()}>
-  <div class="panel" style:height={height}>
+  <div class="panel" class:hidden={hidden} style:height={height}>
     <slot />
   </div>
 </div>

@@ -2,7 +2,7 @@
   import { Surface } from '$lib/core';
   import { COLORS } from '$lib/color';
 
-  import { SurfaceStore, HighlightedItemStore, FocusedItemStore } from '$lib/stores';
+  import { SurfaceStore, HighlightedItemStore, PickingItemStore, FocusedItemStore } from '$lib/stores';
 
   import Panel from './Panel.svelte';
 
@@ -124,7 +124,7 @@
   }
 </style>
 
-<Panel width="300px" height="100%">
+<Panel width="300px" height="100%" hidden={$PickingItemStore.enabled}>
   <button on:click={() => SurfaceStore.historyUndo()}>Undo</button>
   <button on:click={() => SurfaceStore.historyRedo()}>Redo</button>
   <div class="wrapper">
