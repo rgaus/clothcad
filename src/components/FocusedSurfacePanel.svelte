@@ -6,6 +6,7 @@
   import PanelBody from './PanelBody.svelte';
   import RotationField from './RotationField.svelte';
   import FoldField from './FoldField.svelte';
+  import ColorFamilyField from './ColorFamilyField.svelte';
 
   let focusedSurface: Surface | null;
   let parentSurface: Surface | null;
@@ -55,6 +56,35 @@
   <Panel left="300px" height="300px">
     <PanelBody>
       Name: {focusedSurface.name}<br/>
+      Color: <ColorFamilyField
+        value={focusedSurface.colorFamily}
+        on:change={event => {
+          const originalColorFamily = focusedSurface.colorFamily;
+          const colorFamily = event.detail;
+          if (originalColorFamily === colorFamily) {
+            return;
+          }
+
+          SurfaceStore.createMutation({
+            forwards: (value, [surfaceId]) => {
+              return SurfaceStore.updateItem(value, surfaceId, surface => {
+                return {
+                  ...surface,
+                  colorFamily,
+                };
+              });
+            },
+            backwards: (value, [surfaceId]) => {
+              return SurfaceStore.updateItem(value, surfaceId, surface => {
+                return {
+                  ...surface,
+                  colorFamily: originalColorFamily,
+                };
+              });
+            },
+          })(focusedSurface.id);
+        }}
+      />
       {#if !focusedSurface.parentId}
         Pitch: <RotationField bind:value={pitch} />
         Yaw: <RotationField bind:value={yaw} />

@@ -19,6 +19,7 @@
     display: flex;
     border-radius: var(--border-radius-2);
     overflow: hidden;
+    height: var(--space-6);
   }
 
   .faceFieldWrapper select {

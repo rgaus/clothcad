@@ -158,6 +158,6 @@
 
 <div class="container" bind:this={container}></div>
 
-{#each $SurfaceStore.items as surface}
+{#each $SurfaceStore.items as surface (surface.id)}
   <ViewportSurface surface={surface} />
 {/each}

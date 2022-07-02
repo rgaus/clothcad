@@ -22,6 +22,7 @@
   let mesh: Mesh | null = null;
   let lastFacePoints: PlanarFace["points"] = [];
   let lastFolds: Surface["folds"] = [];
+  let lastColorFamily: Surface["colorFamily"] = null;
 
   const viewport = getContext('viewport');
 
@@ -48,6 +49,7 @@
 
     const color = toRawHex(getSurfaceColor());
     material = new MeshLambertMaterial({ color, emissive: color });
+    lastColorFamily = surface.colorFamily;
 
     const path = new ShapePath();
     let first = true;
@@ -141,7 +143,10 @@
   });
 
   $: {
-    if (lastFacePoints !== surface.face.points) {
+    if (
+      lastFacePoints !== surface.face.points ||
+      lastColorFamily !== surface.colorFamily
+    ) {
       onPointsChanged();
     }
     if (lastFolds !== surface.folds) {
