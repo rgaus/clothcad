@@ -2,9 +2,11 @@
   import { Surface } from '$lib/core';
   import { COLORS } from '$lib/color';
 
-  import { SurfaceStore, HighlightedItemStore, PickingItemStore, FocusedItemStore } from '$lib/stores';
+  import { SurfaceStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
 
   import Panel from './Panel.svelte';
+  import Button from './Button.svelte';
+  import ButtonGroup from './ButtonGroup.svelte';
 
   type TabItem = 'drawing' | 'surface' | 'fold';
 
@@ -51,8 +53,11 @@
   .tab:hover {
     background-color: var(--gray-6);
   }
-  .tab:active, .tab:focus {
+  .tab:focus {
     background-color: var(--gray-5);
+  }
+  .tab:active {
+    background-color: var(--gray-8);
   }
   .tab.active {
     background-color: var(--gray-5);
@@ -124,9 +129,7 @@
   }
 </style>
 
-<Panel width="300px" height="100%" hidden={$PickingItemStore.enabled}>
-  <button on:click={() => SurfaceStore.historyUndo()}>Undo</button>
-  <button on:click={() => SurfaceStore.historyRedo()}>Redo</button>
+<Panel width="300px" height="100%" hidden={$PickingItemStore.enabled || $ActionStore.enabled}>
   <div class="wrapper">
     <div class="tabrow">
       <button

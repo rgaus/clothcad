@@ -61,6 +61,8 @@ type SurfaceHistoryListItem = {
   backwards: (value: SurfaceStoreState, context: SurfaceHistoryContext) => SurfaceStoreState;
   args: Array<any>;
   context?: SurfaceHistoryContext;
+
+  // requireExists?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
   requireFreshlyCreated?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
 };
 
@@ -343,6 +345,16 @@ const FocusedItemStore = {
     return state.itemType === itemType && state.itemId === itemId;
   },
 
+  isTypeFocused(
+    state: Item | null,
+    itemType: Item['itemType'],
+  ): boolean {
+    if (!state) {
+      return false;
+    }
+    return state.itemType === itemType;
+  },
+
   focusItem(
     itemType: Item['itemType'],
     itemId: Item['itemId'],
@@ -451,4 +463,91 @@ const PickingItemStore = {
 };
 
 
-export { SurfaceStore, HighlightedItemStore, FocusedItemStore, PickingItemStore };
+
+
+type Action<T extends string, T extends object> = {
+  type: T;
+  args: U;
+};
+type ActionBaseMethods<T extends Action> = {
+  create: () => T;
+  isValid: (action: T) => boolean;
+  getName: (action: T) => string;
+};
+
+type ActionSurfaceSplit = Action<'surface.split', { foldId: LinearFold['id'] | null }>;
+const ActionSurfaceSplit: ActionBaseMethods<ActionSurfaceSplit> = {
+  create() {
+    return { type: 'surface.split', args: { foldId: null } };
+  },
+  getName() {
+    return 'Split';
+  },
+  isValid(action: ActionSurfaceSplit) {
+    return actiona.args.foldId !== null;
+  },
+};
+
+type ActionSurfaceFold = Action<'surface.fold', { foldId: LinearFold['id'], angleInDegrees: number }>;
+const ActionSurfaceFold: ActionBaseMethods<ActionSurfaceFold> = {
+  create() {
+    return { type: 'surface.fold', args: { foldId: null, angleInDegrees: 0 } };
+  },
+  getName() {
+    return 'Fold';
+  },
+  isValid(action: ActionSurfaceFold) {
+    return actiona.args.foldId !== null;
+  },
+};
+
+type Action = (
+  | ActionSurfaceSplit
+  | ActionSurfaceFold
+);
+
+type ActionStoreState = {enabled: true, action: Action, ActionType: ActionBaseMethods} | {enabled: false};
+
+const ActionStore = {
+  ...writable<ActionStoreState>({enabled: false}),
+
+  begin(ActionType: Action) {
+    ActionStore.set({enabled: true, action: ActionType.create(), ActionType});
+  },
+  complete() {
+    ActionStore.set({enabled: false});
+    // TODO: What else needs to happen here?
+  },
+  cancel() {
+    ActionStore.set({enabled: false});
+  },
+
+  isValid(state: ActionStoreState): boolean {
+    if (!state) {
+      return false;
+    }
+    const { action, ActionType } = state;
+    return ActionType.isValid(action);
+  },
+
+  getActionsForFocusedItem(item: Item | null) {
+    if (!item) {
+      return [];
+    }
+
+    switch (item.itemType) {
+      case 'surface':
+        return [
+          [
+            ActionSurfaceSplit,
+            ActionSurfaceFold,
+          ]
+        ];
+      default:
+        return [];
+    }
+  }
+};
+
+
+export { SurfaceStore, HighlightedItemStore, FocusedItemStore, PickingItemStore, ActionStore };

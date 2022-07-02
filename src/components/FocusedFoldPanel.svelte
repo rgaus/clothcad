@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SurfaceStore, FocusedItemStore } from '$lib/stores';
+  import { SurfaceStore, FocusedItemStore, ActionStore, PickingItemStore } from '$lib/stores';
   import { Surface, LinearFold, PlanarFace } from '$lib/core';
 
   import Panel from './Panel.svelte';
@@ -54,7 +54,7 @@
 </script>
 
 {#if focusedFold}
-  <Panel left="300px" height="300px">
+  <Panel left="300px" height="300px" hidden={$PickingItemStore.enabled || $ActionStore.enabled}>
     <PanelBody>
       {#if associatedParentSurface && associatedSurfaceA && associatedSurfaceB}
         {LinearFold.computeAngleBetweenSurfaces(focusedFold, associatedParentSurface, associatedSurfaceA, associatedSurfaceB)}

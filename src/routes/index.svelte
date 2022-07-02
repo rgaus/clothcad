@@ -19,12 +19,16 @@
   } from '$lib/core'
   import Layout from '../components/Layout.svelte';
   import AppBar from '../components/AppBar.svelte';
+  import Button from '../components/Button.svelte';
+  import ButtonGroup from '../components/ButtonGroup.svelte';
+  import Stack from '../components/Stack.svelte';
   import Treeview from '../components/Treeview.svelte';
+  import Toolbar from '../components/Toolbar.svelte';
   import FocusedSurfacePanel from '../components/FocusedSurfacePanel.svelte';
   import FocusedFoldPanel from '../components/FocusedFoldPanel.svelte';
   import Viewport from '../components/Viewport.svelte';
 
-  import { SurfaceStore, PickingItemStore, FocusedItemStore } from '$lib/stores';
+  import { SurfaceStore, PickingItemStore, ActionStore, FocusedItemStore } from '$lib/stores';
 
   let surface: Surface, surfaceA: Surface, surfaceB: Surface;
 
@@ -85,24 +89,43 @@
     }
   });
   onDestroy(() => {
-    SurfaceStore.historyTo(0);
+    /* SurfaceStore.historyTo(0); */
   });
 </script>
-
-<svelte:window on:mousedown={() => FocusedItemStore.blurItem()} />
 
 <Layout>
   <svelte:fragment slot="main">
     {#if $PickingItemStore.enabled}
       <AppBar fixed>
         <span slot="title">Pick {$PickingItemStore.itemType}</span>
-        <span slot="actions">
-          <button on:click={() => PickingItemStore.cancel($PickingItemStore)}>Cancel</button>
-        </span>
+        <svelte:fragment slot="actions">
+          <Button
+            on:click={() => PickingItemStore.cancel($PickingItemStore)}
+            text="Cancel"
+          />
+        </svelte:fragment>
+      </AppBar>
+    {/if}
+    {#if $ActionStore.enabled}
+      <AppBar fixed>
+        <span slot="title">{$ActionStore.ActionType.getName()}</span>
+        <svelte:fragment slot="actions">
+          <Button
+            on:click={() => ActionStore.cancel()}
+            text="Cancel"
+          />
+          <Button
+            on:click={() => ActionStore.complete()}
+            variant="primary"
+            text="Apply"
+          />
+        </svelte:fragment>
       </AppBar>
     {/if}
 
     <Viewport />
+
+    <Toolbar />
 
     <Treeview />
     <FocusedSurfacePanel />

@@ -136,7 +136,11 @@
     const highlightedItem = $HighlightedItemStore;
     if (highlightedItem !== null) {
       FocusedItemStore.focusItem(highlightedItem.itemType, highlightedItem.itemId);
+      return;
     }
+
+    // Otherwise blue the active item
+    FocusedItemStore.blurItem()
   }
 
   onDestroy(() => {

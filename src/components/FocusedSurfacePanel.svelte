@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SurfaceStore, FocusedItemStore } from '$lib/stores';
+  import { SurfaceStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
   import { Surface, LinearFold, PlanarFace } from '$lib/core';
 
   import Panel from './Panel.svelte';
@@ -24,10 +24,6 @@
     }
 
     parentSurface = SurfaceStore.get($SurfaceStore, focusedSurface.parentId);
-
-    pitch = PlanarFace.calculatePitch(focusedSurface.face);
-    yaw = PlanarFace.calculateYaw(focusedSurface.face);
-    roll = PlanarFace.calculateRoll(focusedSurface.face);
   }
 
   FocusedItemStore.subscribe(focusedItem => {
@@ -53,7 +49,7 @@
 </script>
 
 {#if focusedSurface}
-  <Panel left="300px" height="300px">
+  <Panel left="300px" height="300px" hidden={$PickingItemStore.enabled || $ActionStore.enabled}>
     <PanelBody>
       Name: {focusedSurface.name}<br/>
       Color: <ColorFamilyField
@@ -85,11 +81,6 @@
           })(focusedSurface.id);
         }}
       />
-      {#if !focusedSurface.parentId}
-        Pitch: <RotationField bind:value={pitch} />
-        Yaw: <RotationField bind:value={yaw} />
-        Roll: <RotationField bind:value={roll} />
-      {/if}
       <h3>Points</h3>
       <ul>
         {#each focusedSurface.face.points as point}
