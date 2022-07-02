@@ -25,6 +25,7 @@
             {#each ActionTypeOrArray as ActionType}
               <Button
                 size="large"
+                disabled={!ActionType.isToolbarButtonEnabled($FocusedItemStore, $SurfaceStore)}
                 on:click={() => ActionStore.begin(ActionType)}
                 text={ActionType.getName()}
               />
@@ -33,6 +34,7 @@
         {:else}
           <Button
             size="large"
+            disabled={!ActionType.isToolbarButtonEnabled($FocusedItemStore, $SurfaceStore)}
             on:click={() => ActionStore.begin(ActionTypeOrArray)}
             text={ActionTypeOrArray.getName()}
           />

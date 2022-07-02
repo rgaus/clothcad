@@ -34,7 +34,7 @@ export const Surface = {
 
       colorFamily,
       visible: true,
-      parent: null,
+      parentId: null,
     };
   },
 

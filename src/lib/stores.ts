@@ -473,6 +473,7 @@ type ActionBaseMethods<T extends Action> = {
   create: () => T;
   isValid: (action: T) => boolean;
   getName: (action: T) => string;
+  isToolbarButtonEnabled: (focusedItem: Item | null, surfaceStoreState: SurfaceStoreState) => boolean;
 };
 
 type ActionSurfaceSplit = Action<'surface.split', { foldId: LinearFold['id'] | null }>;
@@ -483,6 +484,7 @@ const ActionSurfaceSplit: ActionBaseMethods<ActionSurfaceSplit> = {
   getName() {
     return 'Split';
   },
+  isToolbarButtonEnabled() { return true },
   isValid(action: ActionSurfaceSplit) {
     return actiona.args.foldId !== null;
   },
@@ -496,6 +498,23 @@ const ActionSurfaceFold: ActionBaseMethods<ActionSurfaceFold> = {
   getName() {
     return 'Fold';
   },
+
+  // Only surfaces with parents (ie, not a top level surface) can be folded
+  isToolbarButtonEnabled(focusedItem: Item | null, surfaceStoreState: SurfaceStoreState) {
+    if (!focusedItem) {
+      return false;
+    }
+    if (focusedItem.itemType !== 'surface') {
+      return false;
+    }
+    const surface = SurfaceStore.get(surfaceStoreState, focusedItem.itemId);
+    if (!surface) {
+      return false;
+    }
+
+    return surface.parentId !== null;
+  },
+
   isValid(action: ActionSurfaceFold) {
     return actiona.args.foldId !== null;
   },
@@ -546,7 +565,7 @@ const ActionStore = {
       default:
         return [];
     }
-  }
+  },
 };
 
 
