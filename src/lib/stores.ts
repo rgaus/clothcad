@@ -1,7 +1,11 @@
 import { writable } from 'svelte/store';
 import type { Writable } from 'svelte/store';
+import type { Component } from 'svelte';
 
 import { Surface } from '$lib/core';
+
+import ActionSurfaceSplitPanel from '../components/ActionSurfaceSplitPanel.svelte';
+import ActionSurfaceFoldPanel from '../components/ActionSurfaceFoldPanel.svelte';
 
 type CollectionStoreAPI<T extends {id: string}, U extends { items: Array<T> }> = Writable<U> & {
   list: (value: U) => Array<T>;
@@ -287,6 +291,49 @@ const SurfaceStore = {
   getSurfacesContainingFold(value: SurfaceStoreState, foldId: LinearFold['id']): Array<Surface> {
     return value.items.filter(surface => typeof surface.folds.find(fold => fold.id === foldId) !== 'undefined');
   },
+
+  subscribeToFocusedSurface(
+    initialSurfaceStoreState: SurfaceStoreState,
+    initialFocusedItemState: Item | null,
+    func: (s: Surface | null) => void
+  ) {
+    let focusedSurface: Surface | null = null;
+    let surfaceStoreState = initialSurfaceStoreState;
+
+    // Call subscribe syncrnously initially
+    const onFocusedItemChanged = (focusedItem: Item | null) => {
+      if (!focusedItem) {
+        focusedSurface = null;
+        func(focusedSurface);
+        return;
+      }
+      if (focusedItem.itemType !== "surface") {
+        focusedSurface = null;
+        func(focusedSurface);
+        return;
+      }
+
+      focusedSurface = SurfaceStore.get(surfaceStoreState, focusedItem.itemId);
+      func(focusedSurface);
+    }
+    onFocusedItemChanged(initialFocusedItemState);
+
+    // And then call it going forward when there are changes
+    const focusedItemUnsubscribe = FocusedItemStore.subscribe(onFocusedItemChanged);
+    const surfaceStoreUnsubscribe = SurfaceStore.subscribe(value => {
+      surfaceStoreState = value;
+      if (!focusedSurface) {
+        return;
+      }
+      focusedSurface = SurfaceStore.get(surfaceStoreState, focusedSurface.id);
+      func(focusedSurface);
+    });
+
+    return () => {
+      focusedItemUnsubscribe();
+      surfaceStoreUnsubscribe();
+    };
+  },
 };
 
 
@@ -467,33 +514,35 @@ const PickingItemStore = {
 
 type Action<T extends string, T extends object> = {
   type: T;
-  args: U;
+  completable: boolean;
+  onComplete?: () => void;
+  onCancel?: () => void;
 };
 type ActionBaseMethods<T extends Action> = {
   create: () => T;
-  isValid: (action: T) => boolean;
   getName: (action: T) => string;
   isToolbarButtonEnabled: (focusedItem: Item | null, surfaceStoreState: SurfaceStoreState) => boolean;
+  getPanelComponent: () => Component | null;
 };
 
 type ActionSurfaceSplit = Action<'surface.split', { foldId: LinearFold['id'] | null }>;
 const ActionSurfaceSplit: ActionBaseMethods<ActionSurfaceSplit> = {
   create() {
-    return { type: 'surface.split', args: { foldId: null } };
+    return { type: 'surface.split', completable: false };
   },
   getName() {
     return 'Split';
   },
   isToolbarButtonEnabled() { return true },
-  isValid(action: ActionSurfaceSplit) {
-    return actiona.args.foldId !== null;
+  getPanelComponent() {
+    return ActionSurfaceSplitPanel;
   },
 };
 
 type ActionSurfaceFold = Action<'surface.fold', { foldId: LinearFold['id'], angleInDegrees: number }>;
 const ActionSurfaceFold: ActionBaseMethods<ActionSurfaceFold> = {
   create() {
-    return { type: 'surface.fold', args: { foldId: null, angleInDegrees: 0 } };
+    return { type: 'surface.fold', completable: false };
   },
   getName() {
     return 'Fold';
@@ -515,8 +564,8 @@ const ActionSurfaceFold: ActionBaseMethods<ActionSurfaceFold> = {
     return surface.parentId !== null;
   },
 
-  isValid(action: ActionSurfaceFold) {
-    return actiona.args.foldId !== null;
+  getPanelComponent() {
+    return ActionSurfaceFoldPanel;
   },
 };
 
@@ -529,25 +578,6 @@ type ActionStoreState = {enabled: true, action: Action, ActionType: ActionBaseMe
 
 const ActionStore = {
   ...writable<ActionStoreState>({enabled: false}),
-
-  begin(ActionType: Action) {
-    ActionStore.set({enabled: true, action: ActionType.create(), ActionType});
-  },
-  complete() {
-    ActionStore.set({enabled: false});
-    // TODO: What else needs to happen here?
-  },
-  cancel() {
-    ActionStore.set({enabled: false});
-  },
-
-  isValid(state: ActionStoreState): boolean {
-    if (!state) {
-      return false;
-    }
-    const { action, ActionType } = state;
-    return ActionType.isValid(action);
-  },
 
   getActionsForFocusedItem(item: Item | null) {
     if (!item) {
@@ -565,6 +595,63 @@ const ActionStore = {
       default:
         return [];
     }
+  },
+
+  begin(ActionType: Action) {
+    ActionStore.set({
+      enabled: true,
+      action: ActionType.create(),
+      ActionType,
+    });
+  },
+
+  registerComplete(onComplete: () => Promise<void>) {
+    ActionStore.update(value => {
+      if (value.enabled) {
+        return { ...value, onComplete };
+      } else {
+        return value;
+      }
+    });
+  },
+
+  registerCancel(onCancel: () => Promise<void>) {
+    ActionStore.update(value => {
+      if (value.enabled) {
+        return { ...value, onCancel };
+      } else {
+        return value;
+      }
+    });
+  },
+
+  async complete(value: ActionStoreState) {
+    if (!value.enabled) {
+      return;
+    }
+    if (value.onComplete) {
+      await value.onComplete();
+    }
+    ActionStore.set({ enabled: false });
+  },
+  async cancel(value: ActionStoreState) {
+    if (!value.enabled) {
+      return;
+    }
+    if (value.onCancel) {
+      await value.onCancel();
+    }
+    ActionStore.set({ enabled: false });
+  },
+
+  markCompletable(completable: boolean) {
+    ActionStore.update(value => {
+      if (value.enabled) {
+        return { ...value, completable };
+      } else {
+        return value;
+      }
+    });
   },
 };
 

@@ -72,6 +72,10 @@
   .button.variantPrimary:active {
     background-color: var(--cyan-9);
   }
+  .button.variantPrimary[disabled] {
+    color: var(--gray-7);
+    background-color: var(--cyan-9);
+  }
 </style>
 
 <button

@@ -3,6 +3,7 @@
 :root {
   /* FONTS */
   --font-size: 14px;
+  --font-size-large: 16px;
   --font-family: "Roboto Mono";
   --font-weight-bold: bold;
   --font-weight-medium: 500;
@@ -22,6 +23,8 @@
   --space-6: 24px;
   --space-7: 28px;
   --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
 
   /* COLORS */
   --white: #ffffff;

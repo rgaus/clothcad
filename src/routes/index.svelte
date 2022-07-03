@@ -95,6 +95,14 @@
 
 <Layout>
   <svelte:fragment slot="main">
+    <Viewport />
+
+    <Toolbar />
+
+    <Treeview />
+    <FocusedSurfacePanel />
+    <FocusedFoldPanel />
+
     {#if $PickingItemStore.enabled}
       <AppBar fixed>
         <span slot="title">Pick {$PickingItemStore.itemType}</span>
@@ -106,29 +114,27 @@
         </svelte:fragment>
       </AppBar>
     {/if}
+
     {#if $ActionStore.enabled}
-      <AppBar fixed>
-        <span slot="title">{$ActionStore.ActionType.getName()}</span>
-        <svelte:fragment slot="actions">
-          <Button
-            on:click={() => ActionStore.cancel()}
-            text="Cancel"
-          />
-          <Button
-            on:click={() => ActionStore.complete()}
-            variant="primary"
-            text="Apply"
-          />
-        </svelte:fragment>
-      </AppBar>
+      {#if !$PickingItemStore.enabled}
+        <AppBar fixed>
+          <span slot="title">{$ActionStore.ActionType.getName()}</span>
+          <svelte:fragment slot="actions">
+            <Button
+              on:click={() => ActionStore.cancel($ActionStore)}
+              text="Cancel"
+            />
+            <Button
+              on:click={() => ActionStore.complete($ActionStore)}
+              disabled={!$ActionStore.completable}
+              variant="primary"
+              text="Apply"
+            />
+          </svelte:fragment>
+        </AppBar>
+      {/if}
+
+      <svelte:component this={$ActionStore.ActionType.getPanelComponent()} />
     {/if}
-
-    <Viewport />
-
-    <Toolbar />
-
-    <Treeview />
-    <FocusedSurfacePanel />
-    <FocusedFoldPanel />
   </svelte:fragment>
 </Layout>

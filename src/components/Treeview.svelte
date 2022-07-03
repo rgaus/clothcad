@@ -129,6 +129,7 @@
   }
 </style>
 
+{console.log('action', $ActionStore)}
 <Panel width="300px" height="100%" hidden={$PickingItemStore.enabled || $ActionStore.enabled}>
   <div class="wrapper">
     <div class="tabrow">

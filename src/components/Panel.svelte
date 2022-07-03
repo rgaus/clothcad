@@ -1,7 +1,7 @@
 <script lang="ts">
   export let top: number = 0;
   export let left: number = 0;
-  export let height: string;
+  export let height: string = 'auto';
   export let width: string = "300px";
   export let hidden: boolean = false;
 </script>
@@ -20,14 +20,14 @@
   }
 
   .panel {
+    color: var(--gray-1);
     background-color: var(--gray-9);
     border-radius: var(--border-radius-2);
     overflow-y: auto;
     pointer-events: auto;
   }
   .panel.hidden {
-    pointer-events: none;
-    opacity: 0.05;
+    display: none;
   }
 </style>
 

@@ -11,7 +11,14 @@
 	import * as SC from 'svelte-cubed';
   import { onMount, onDestroy, setContext } from 'svelte';
 
-  import { SurfaceStore, HighlightedItemStore, FocusedItemStore, Item } from '$lib/stores';
+  import {
+    SurfaceStore,
+    HighlightedItemStore,
+    FocusedItemStore,
+    ActionStore,
+    PickingItemStore,
+    Item,
+  } from '$lib/stores';
   import { PlanarCoordinates } from '$lib/core';
   import { Cyan4, COLORS, toRawHex } from '$lib/color';
 
@@ -132,6 +139,11 @@
   }
 
   function onClick() {
+    // If in an action, but not in picking mode, then clicking shouldn't select things
+    if ($ActionStore.enabled && !$PickingItemStore.enabled) {
+      return;
+    }
+
     // If an item is highlighted, make it the selected item on click
     const highlightedItem = $HighlightedItemStore;
     if (highlightedItem !== null) {

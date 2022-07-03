@@ -7,7 +7,7 @@
   @import "../styles/variables.css";
 
   .appbar {
-    height: var(--space-8);
+    height: var(--space-10);
     width: 100%;
     background-color: var(--gray-9);
     color: var(--gray-1);
@@ -29,7 +29,7 @@
   }
 
   .title {
-    font-size: var(--font-size-4);
+    font-size: var(--font-size-large);
     font-weight: var(--font-weight-bold);
   }
 </style>
