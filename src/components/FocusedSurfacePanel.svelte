@@ -7,6 +7,7 @@
   import PanelBody from './ui/PanelBody.svelte';
   import ColorFamilyField from './ui/ColorFamilyField.svelte';
   import TextField from './ui/TextField.svelte';
+  import ButtonGroup from './ui/ButtonGroup.svelte';
 
   let focusedSurface: Surface | null;
   let focusedSurfaceName: Surface['name'] = '';
@@ -35,78 +36,80 @@
 {#if focusedSurface}
   <Panel left="300px" height="300px" hidden={$PickingItemStore.enabled || $ActionStore.enabled}>
     <PanelBody>
-      Name: <TextField
-        bind:value={focusedSurfaceName}
-        invalid={focusedSurfaceNameInvalid}
-        muted
-        on:blur={event => {
-          if (!focusedSurface) {
-            return;
-          }
-          if (focusedSurfaceNameInvalid) {
-            focusedSurfaceName = focusedSurface.name;
-            return
-          }
+      <ButtonGroup>
+        <ColorFamilyField
+          value={focusedSurface.colorFamily}
+          on:change={event => {
+            if (!focusedSurface) {
+              return;
+            }
 
-          const originalName = focusedSurface.name;
-          const name = focusedSurfaceName;
-          if (originalName === name) {
-            return;
-          }
+            const originalColorFamily = focusedSurface.colorFamily;
+            const colorFamily = event.detail;
+            if (originalColorFamily === colorFamily) {
+              return;
+            }
 
-          SurfaceStore.createMutation({
-            forwards: (value, [surfaceId]) => {
-              return SurfaceStore.updateItem(value, surfaceId, surface => {
-                return {
-                  ...surface,
-                  name,
-                };
-              });
-            },
-            backwards: (value, [surfaceId]) => {
-              return SurfaceStore.updateItem(value, surfaceId, surface => {
-                return {
-                  ...surface,
-                  name: originalName,
-                };
-              });
-            },
-          })(focusedSurface.id);
-        }}
-      />
-      Color: <ColorFamilyField
-        value={focusedSurface.colorFamily}
-        on:change={event => {
-          if (!focusedSurface) {
-            return;
-          }
+            SurfaceStore.createMutation({
+              forwards: (value, [surfaceId]) => {
+                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                  return {
+                    ...surface,
+                    colorFamily,
+                  };
+                });
+              },
+              backwards: (value, [surfaceId]) => {
+                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                  return {
+                    ...surface,
+                    colorFamily: originalColorFamily,
+                  };
+                });
+              },
+            })(focusedSurface.id);
+          }}
+        />
+        <TextField
+          bind:value={focusedSurfaceName}
+          invalid={focusedSurfaceNameInvalid}
+          muted
+          on:blur={() => {
+            if (!focusedSurface) {
+              return;
+            }
+            if (focusedSurfaceNameInvalid) {
+              focusedSurfaceName = focusedSurface.name;
+              return
+            }
 
-          const originalColorFamily = focusedSurface.colorFamily;
-          const colorFamily = event.detail;
-          if (originalColorFamily === colorFamily) {
-            return;
-          }
+            const originalName = focusedSurface.name;
+            const name = focusedSurfaceName;
+            if (originalName === name) {
+              return;
+            }
 
-          SurfaceStore.createMutation({
-            forwards: (value, [surfaceId]) => {
-              return SurfaceStore.updateItem(value, surfaceId, surface => {
-                return {
-                  ...surface,
-                  colorFamily,
-                };
-              });
-            },
-            backwards: (value, [surfaceId]) => {
-              return SurfaceStore.updateItem(value, surfaceId, surface => {
-                return {
-                  ...surface,
-                  colorFamily: originalColorFamily,
-                };
-              });
-            },
-          })(focusedSurface.id);
-        }}
-      />
+            SurfaceStore.createMutation({
+              forwards: (value, [surfaceId]) => {
+                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                  return {
+                    ...surface,
+                    name,
+                  };
+                });
+              },
+              backwards: (value, [surfaceId]) => {
+                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                  return {
+                    ...surface,
+                    name: originalName,
+                  };
+                });
+              },
+            })(focusedSurface.id);
+          }}
+        />
+      </ButtonGroup>
       <h3>Points</h3>
       <ul>
         {#each focusedSurface.face.points as point}

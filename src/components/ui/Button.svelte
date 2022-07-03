@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
 
-  const inButtonGroup: () => boolean = getContext('button-in-group') || (() => false);
+  const inControlGroup: () => boolean = getContext('control-in-group') || (() => false);
 
   export let variant: 'default' | 'primary' = 'default';
   export let text: string = '';
@@ -57,16 +57,16 @@
     cursor: not-allowed;
   }
 
-  .button.inButtonGroup {
+  .button.inControlGroup {
     border-radius: var(--border-radius-1);
     border-left: 0px;
   }
-  .button.inButtonGroup:first-child {
+  .button.inControlGroup:first-child {
     border-top-left-radius: var(--border-radius-3);
     border-bottom-left-radius: var(--border-radius-3);
     border-left: 1px solid var(--gray-8);
   }
-  .button.inButtonGroup:last-child {
+  .button.inControlGroup:last-child {
     border-top-right-radius: var(--border-radius-3);
     border-bottom-right-radius: var(--border-radius-3);
   }
@@ -95,7 +95,7 @@
   class="button"
   class:sizeLarge={size === 'large'}
   class:variantPrimary={variant === 'primary'}
-  class:inButtonGroup={inButtonGroup()}
+  class:inControlGroup={inControlGroup()}
   class:hasText={text !== ''}
   class:invalid={invalid}
   disabled={disabled}
