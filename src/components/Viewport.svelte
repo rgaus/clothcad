@@ -16,8 +16,8 @@
     FocusedItemStore,
     ActionStore,
     PickingItemStore,
-    Item,
   } from '$lib/stores';
+  import type { Item } from '$lib/types/item';
   import type { ViewportContext } from '$lib/viewport-context';
 
   import ViewportSurface from './ViewportSurface.svelte';

@@ -1,5 +1,5 @@
 import type { Scene, PerspectiveCamera, WebGLRenderer } from 'three';
-import type { Item } from '$lib/stores';
+import type { Item } from '$lib/types/item';
 
 export type ViewportContext = {
   getScene: () => Scene | null;

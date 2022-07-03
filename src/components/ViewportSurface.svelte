@@ -3,7 +3,8 @@
   import { SpacialCoordinates } from '$lib/core';
   import type { Surface, PlanarFace, LinearFold } from '$lib/core';
   import { Cyan7, COLORS, toRawHex } from '$lib/color';
-  import { HighlightedItemStore, Item } from '$lib/stores';
+  import { HighlightedItemStore } from '$lib/stores';
+  import { Item } from '$lib/types/item';
   import {
     Mesh,
     MeshLambertMaterial,
