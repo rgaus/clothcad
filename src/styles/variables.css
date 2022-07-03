@@ -84,3 +84,7 @@ body {
 * {
   box-sizing: border-box;
 }
+
+::selection {
+  background-color: var(--cyan-7);
+}

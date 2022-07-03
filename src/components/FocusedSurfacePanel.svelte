@@ -6,15 +6,28 @@
   import Panel from './ui/Panel.svelte';
   import PanelBody from './ui/PanelBody.svelte';
   import ColorFamilyField from './ui/ColorFamilyField.svelte';
+  import TextField from './ui/TextField.svelte';
 
   let focusedSurface: Surface | null;
+  let focusedSurfaceName: Surface['name'] = '';
+  let focusedSurfaceNameInvalid: boolean = true;
+
+  function surfaceNameValid(surfaceName: string): boolean {
+    return surfaceName.trim().length > 0;
+  }
 
   let unsubscribeFocusedSurface: (() => void) | null = null;
   onMount(() => {
     unsubscribeFocusedSurface = SurfaceStore.subscribeToFocusedSurface($SurfaceStore, $FocusedItemStore, surface => {
       focusedSurface = surface;
+      focusedSurfaceName = focusedSurface ? focusedSurface.name : '';
+      focusedSurfaceNameInvalid = !surfaceNameValid(focusedSurfaceName);
     });
   });
+
+  $: {
+    focusedSurfaceNameInvalid = !surfaceNameValid(focusedSurfaceName);
+  }
 
   onDestroy(() => unsubscribeFocusedSurface && unsubscribeFocusedSurface());
 </script>
@@ -22,7 +35,45 @@
 {#if focusedSurface}
   <Panel left="300px" height="300px" hidden={$PickingItemStore.enabled || $ActionStore.enabled}>
     <PanelBody>
-      Name: {focusedSurface.name}<br/>
+      Name: <TextField
+        bind:value={focusedSurfaceName}
+        invalid={focusedSurfaceNameInvalid}
+        muted
+        on:blur={event => {
+          if (!focusedSurface) {
+            return;
+          }
+          if (focusedSurfaceNameInvalid) {
+            focusedSurfaceName = focusedSurface.name;
+            return
+          }
+
+          const originalName = focusedSurface.name;
+          const name = focusedSurfaceName;
+          if (originalName === name) {
+            return;
+          }
+
+          SurfaceStore.createMutation({
+            forwards: (value, [surfaceId]) => {
+              return SurfaceStore.updateItem(value, surfaceId, surface => {
+                return {
+                  ...surface,
+                  name,
+                };
+              });
+            },
+            backwards: (value, [surfaceId]) => {
+              return SurfaceStore.updateItem(value, surfaceId, surface => {
+                return {
+                  ...surface,
+                  name: originalName,
+                };
+              });
+            },
+          })(focusedSurface.id);
+        }}
+      />
       Color: <ColorFamilyField
         value={focusedSurface.colorFamily}
         on:change={event => {
