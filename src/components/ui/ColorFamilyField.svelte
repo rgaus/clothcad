@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
   import { COLORS } from '$lib/color';
+  import Button from './Button.svelte';
+  import ButtonGroup from './ButtonGroup.svelte';
 
   export let value: string | null = null;
   export let variant: 'light' | 'dark' = 'light';
@@ -17,35 +19,21 @@
     position: relative;
   }
 
-  .colorField {
-    display: flex;
-    border-radius: var(--border-radius-2);
-    overflow: hidden;
-    padding: 0px;
-    width: var(--space-6);
-    height: var(--space-6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .colorField.invalid {
-    border-color: var(--red-7);
-  }
-
   .swatch {
     width: var(--space-4);
     height: var(--space-4);
+    border-radius: var(--border-radius-2);
   }
 
   .popup {
     position: absolute;
-    top: var(--space-6);
-    left: 0px;
-    height: var(--space-6);
+    top: calc(var(--space-6) + (var(--space-1) / 2));
+    left: calc(-1 * (var(--space-1) / 2));
 
     display: none;
-    background-color: var(--gray-2);
+    background-color: var(--gray-5);
+    padding: calc(var(--space-1) / 2);
+    border-radius: var(--border-radius-2);
   }
   .popup.visible {
     display: flex;
@@ -53,23 +41,30 @@
 </style>
 
 <div class="colorFieldWrapper">
-  <button
-    class="colorField"
-    class:invalid={typeof COLORS[value || ''] === 'undefined'}
+  <Button
+    width="var(--space-6)"
+    height="var(--space-6)"
+    invalid={typeof COLORS[value || ''] === 'undefined'}
     on:click={() => { showPopup = !showPopup }}
   >
     <div class="swatch" style:background-color={COLORS[value || ''] ? COLORS[value || ''][variant]: ''}></div>
-  </button>
+  </Button>
 
   <div class="popup" class:visible={showPopup}>
-    {#each Object.entries(COLORS) as [family, color]}
-      <button class="colorField" on:click={() => {
-        value = family;
-        showPopup = false;
-        dispatch('change', value);
-      }}>
-        <div class="swatch" style:background-color={color[variant]}></div>
-      </button>
-    {/each}
+    <ButtonGroup>
+      {#each Object.entries(COLORS) as [family, color]}
+        <Button
+          width="var(--space-6)"
+          height="var(--space-6)"
+          on:click={() => {
+            value = family;
+            showPopup = false;
+            dispatch('change', value);
+          }}
+        >
+          <div class="swatch" style:background-color={color[variant]}></div>
+        </Button>
+      {/each}
+    </ButtonGroup>
   </div>
 </div>

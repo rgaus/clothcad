@@ -68,11 +68,13 @@ const DRAG_DEGREES_PER_PIXEL = 0.5;
     font-size: var(--font-size);
 
     border: 1px solid var(--gray-7);
-    border-right: 0px;
     width: 48px;
+
+    border-top-left-radius: var(--border-radius-3);
+    border-bottom-left-radius: var(--border-radius-3);
   }
   .rotationFieldWrapper input:focus {
-    border-color: var(--cyan-7);
+    border-color: var(--cyan-5);
     outline: none;
   }
   .rotationFieldWrapper input.invalid {
@@ -83,8 +85,8 @@ const DRAG_DEGREES_PER_PIXEL = 0.5;
     width: var(--space-6);
     height: var(--space-6);
 
-    background-color: var(--gray-6);
-    border: 1px solid var(--gray-7);
+    background-color: var(--gray-7);
+    border: 1px solid var(--gray-8);
     border-left: 0px;
     overflow: hidden;
 
@@ -94,8 +96,14 @@ const DRAG_DEGREES_PER_PIXEL = 0.5;
     align-items: center;
     justify-content: center;
 
+    border-top-right-radius: var(--border-radius-3);
+    border-bottom-right-radius: var(--border-radius-3);
+
     --rotation-handle-size: 6px;
     --rotation-handle-offset: var(--space-1);
+  }
+  .rotationHandleWrapper:active {
+    background-color: var(--gray-8);
   }
 
   .rotator {

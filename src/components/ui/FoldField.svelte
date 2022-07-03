@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { LinearFold, Surface } from '$lib/core';
   import { FocusedItemStore, PickingItemStore } from '$lib/stores';
+  import Button from './Button.svelte';
+  import ButtonGroup from './ButtonGroup.svelte';
 
   export let value: LinearFold['id'] | null = null;
 
@@ -30,11 +32,13 @@
     font-size: var(--font-size);
 
     border: 1px solid var(--gray-7);
-    border-right: 0px;
     width: 100px;
+
+    border-top-left-radius: var(--border-radius-3);
+    border-bottom-left-radius: var(--border-radius-3);
   }
   .faceFieldWrapper select:focus {
-    border-color: var(--cyan-7);
+    border-color: var(--cyan-5);
     outline: none;
   }
 
@@ -44,16 +48,19 @@
 </style>
 
 <div class="faceFieldWrapper">
-  <select bind:value={value} class:invalid={!foldIds.includes(value || '')}>
-    {#each surface.folds as fold (fold.id)}
-      <option value={fold.id}>{fold.id}</option>
-    {/each}
-  </select>
-  <button
-    on:click={() => {
-      PickingItemStore.pickFold($FocusedItemStore, surface).then(itemId => {
-        value = itemId;
-      });
-    }}
-  >+</button>
+  <ButtonGroup>
+    <select bind:value={value} class:invalid={!foldIds.includes(value || '')}>
+      {#each surface.folds as fold (fold.id)}
+        <option value={fold.id}>{fold.id}</option>
+      {/each}
+    </select>
+    <Button
+      on:click={() => {
+        PickingItemStore.pickFold($FocusedItemStore, surface).then(itemId => {
+          value = itemId;
+        });
+      }}
+      text="+"
+    />
+  </ButtonGroup>
 </div>

@@ -7,6 +7,9 @@
   export let text: string = '';
   export let size: 'small' | 'large' = 'small';
   export let disabled = false;
+  export let width: string = '';
+  export let height: string = '';
+  export let invalid: boolean = false;
 </script>
 
 <style>
@@ -28,14 +31,24 @@
     font-weight: var(--font-weight-medium);
 
     margin: 0px;
-    padding-left: var(--space-2);
-    padding-right: var(--space-2);
+    padding: 0px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .button:hover {
     background-color: var(--gray-6);
   }
   .button:active {
     background-color: var(--gray-8);
+  }
+  .button.hasText {
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+  }
+  .button.invalid {
+    border-color: var(--red-7);
   }
 
   .button[disabled] {
@@ -83,8 +96,13 @@
   class:sizeLarge={size === 'large'}
   class:variantPrimary={variant === 'primary'}
   class:inButtonGroup={inButtonGroup()}
+  class:hasText={text !== ''}
+  class:invalid={invalid}
   disabled={disabled}
+  style:width={width}
+  style:height={height}
   on:click
 >
   {text}
+  <slot />
 </button>
