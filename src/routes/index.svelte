@@ -5,8 +5,8 @@
     Surface,
   } from '$lib/core'
   import Layout from '../components/Layout.svelte';
-  import AppBar from '../components/AppBar.svelte';
-  import Button from '../components/Button.svelte';
+  import AppBar from '../components/ui/AppBar.svelte';
+  import Button from '../components/ui/Button.svelte';
   import Treeview from '../components/Treeview.svelte';
   import Toolbar from '../components/Toolbar.svelte';
   import FocusedSurfacePanel from '../components/FocusedSurfacePanel.svelte';

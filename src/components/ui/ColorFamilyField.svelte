@@ -11,7 +11,7 @@
 </script>
 
 <style>
-  @import "../styles/variables.css";
+  @import "../../styles/variables.css";
 
   .colorFieldWrapper {
     position: relative;

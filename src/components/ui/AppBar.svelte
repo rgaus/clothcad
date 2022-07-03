@@ -4,7 +4,7 @@
 </script>
 
 <style>
-  @import "../styles/variables.css";
+  @import "../../styles/variables.css";
 
   .appbar {
     height: var(--space-10);

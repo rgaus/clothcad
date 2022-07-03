@@ -3,9 +3,9 @@
   import { SurfaceStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
   import type { Surface } from '$lib/core';
 
-  import Panel from './Panel.svelte';
-  import PanelBody from './PanelBody.svelte';
-  import ColorFamilyField from './ColorFamilyField.svelte';
+  import Panel from './ui/Panel.svelte';
+  import PanelBody from './ui/PanelBody.svelte';
+  import ColorFamilyField from './ui/ColorFamilyField.svelte';
 
   let focusedSurface: Surface | null;
 

@@ -52,7 +52,7 @@ const DRAG_DEGREES_PER_PIXEL = 0.5;
 </script>
 
 <style>
-  @import "../styles/variables.css";
+  @import "../../styles/variables.css";
 
   .rotationFieldWrapper {
     display: flex;

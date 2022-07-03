@@ -2,9 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { SurfaceStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
   import { Surface, LinearFold } from '$lib/core';
-  import Panel from './Panel.svelte';
-  import FoldField from './FoldField.svelte';
-  import RotationField from './RotationField.svelte';
+  import Panel from './ui/Panel.svelte';
+  import FoldField from './ui/FoldField.svelte';
+  import RotationField from './ui/RotationField.svelte';
 
   let focusedSurface: Surface | null;
   let focusedSurfaceParent: Surface | null;

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Button from '../components/Button.svelte';
-  import ButtonGroup from '../components/ButtonGroup.svelte';
-  import Stack from '../components/Stack.svelte';
+  import Button from '../components/ui/Button.svelte';
+  import ButtonGroup from '../components/ui/ButtonGroup.svelte';
+  import Stack from '../components/ui/Stack.svelte';
 
   import { SurfaceStore, FocusedItemStore, ActionStore, PickingItemStore } from '$lib/stores';
 </script>

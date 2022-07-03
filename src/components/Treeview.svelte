@@ -3,7 +3,7 @@
 
   import { SurfaceStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
 
-  import Panel from './Panel.svelte';
+  import Panel from './ui/Panel.svelte';
 
   type TabItem = 'drawing' | 'surface' | 'fold';
 

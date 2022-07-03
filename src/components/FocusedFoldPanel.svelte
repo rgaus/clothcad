@@ -2,8 +2,8 @@
   import { SurfaceStore, FocusedItemStore, ActionStore, PickingItemStore } from '$lib/stores';
   import { Surface, LinearFold } from '$lib/core';
 
-  import Panel from './Panel.svelte';
-  import PanelBody from './PanelBody.svelte';
+  import Panel from './ui/Panel.svelte';
+  import PanelBody from './ui/PanelBody.svelte';
 
   let focusedFold: LinearFold | null;
   let associatedParentSurface: Surface | null;

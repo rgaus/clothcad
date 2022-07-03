@@ -13,7 +13,7 @@
 </script>
 
 <style>
-  @import "../styles/variables.css";
+  @import "../../styles/variables.css";
 
   .faceFieldWrapper {
     display: flex;

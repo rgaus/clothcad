@@ -1,5 +1,5 @@
 <style>
-  @import "../styles/variables.css";
+  @import "../../styles/variables.css";
 
   .body {
     padding: var(--space-2);
