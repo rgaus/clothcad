@@ -29,11 +29,6 @@
     justify-content: center;
   }
 
-  .colorField.focus {
-    border-color: var(--cyan-7);
-    outline: none;
-  }
-
   .colorField.invalid {
     border-color: var(--red-7);
   }
@@ -58,8 +53,12 @@
 </style>
 
 <div class="colorFieldWrapper">
-  <button class="colorField" on:click={() => { showPopup = !showPopup }}>
-    <div class="swatch" style:background-color={COLORS[value] ? COLORS[value][variant]: ''}></div>
+  <button
+    class="colorField"
+    class:invalid={typeof COLORS[value || ''] === 'undefined'}
+    on:click={() => { showPopup = !showPopup }}
+  >
+    <div class="swatch" style:background-color={COLORS[value || ''] ? COLORS[value || ''][variant]: ''}></div>
   </button>
 
   <div class="popup" class:visible={showPopup}>

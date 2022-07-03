@@ -10,7 +10,19 @@
 
   onMount(() => {
     ActionStore.registerComplete(async () => {
-      SurfaceStore.createMutation({
+      if (!focusedSurface) {
+        return;
+      }
+
+      SurfaceStore.createMutation<
+        [Surface['id'] | null, LinearFold['id'] | null],
+        {
+          surfaceAId?: Surface['id'],
+          surfaceAFoldIds?: Array<LinearFold['id']>,
+          surfaceBId?: Surface['id'],
+          surfaceBFoldIds?: Array<LinearFold['id']>,
+        }
+      >({
         forwards: (value, [parentSurfaceId, foldId], context) => {
           const parentSurface = SurfaceStore.get(value, parentSurfaceId);
           if (!parentSurface) {
@@ -104,7 +116,7 @@
   }
 
   onDestroy(() => {
-    unsubscribeFocusedSurface();
+    unsubscribeFocusedSurface && unsubscribeFocusedSurface();
   });
 </script>
 

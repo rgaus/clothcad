@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Vector3 } from 'three';
 import { PlanarCoordinates, SpacialCoordinates } from './coordinates';
 import { radiansToDegrees, degreesToRadians } from './utils';
+import type { Surface } from './surface';
 
 export type LinearFold = {
   type: 'linear-fold';
@@ -42,7 +43,7 @@ export const LinearFold = {
     const midpointSpacial = PlanarCoordinates.toSpacialCoordinates(foldMidpoint, parentSurface.face);
 
     const midpointSurfaceA = SpacialCoordinates.toPlanarCoordinates(midpointSpacial, surfaceA.face);
-    const midpointSurfaceB = SpacialCoordinates.toPlanarCoordinates(midpointSpacial, surfaceB.face);
+    // const midpointSurfaceB = SpacialCoordinates.toPlanarCoordinates(midpointSpacial, surfaceB.face);
 
     const endpointSurfaceA = PlanarCoordinates.create(
       midpointSurfaceA.x + (foldOffsetAmount * Math.cos(degreesToRadians(foldAngleDegrees + 90))),

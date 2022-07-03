@@ -1,12 +1,9 @@
 <script lang="ts">
-  import { Surface } from '$lib/core';
   import { COLORS } from '$lib/color';
 
   import { SurfaceStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
 
   import Panel from './Panel.svelte';
-  import Button from './Button.svelte';
-  import ButtonGroup from './ButtonGroup.svelte';
 
   type TabItem = 'drawing' | 'surface' | 'fold';
 
@@ -97,9 +94,6 @@
     height: var(--space-6);
     flex-grow: 0;
     flex-shrink: 0;
-  }
-  .icon.surface {
-    color: var(--cyan-4);
   }
   .icon.fold {
     color: var(--red-4);

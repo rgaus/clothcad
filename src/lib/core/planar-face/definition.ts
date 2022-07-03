@@ -1,5 +1,5 @@
-import { SpacialCoordinates } from '../coordinates';
-import { Matrix4 } from 'three';
+import type { SpacialCoordinates } from '../coordinates';
+import type { Matrix4 } from 'three';
 
 export type PlanarFace = {
   type: 'planar-face',

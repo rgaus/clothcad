@@ -8,7 +8,6 @@
 <script lang="ts">
 	import * as THREE from 'three';
   import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-	import * as SC from 'svelte-cubed';
   import { onMount, onDestroy, setContext } from 'svelte';
 
   import {
@@ -19,8 +18,7 @@
     PickingItemStore,
     Item,
   } from '$lib/stores';
-  import { PlanarCoordinates } from '$lib/core';
-  import { Cyan4, COLORS, toRawHex } from '$lib/color';
+  import type { ViewportContext } from '$lib/viewport-context';
 
   import ViewportSurface from './ViewportSurface.svelte';
 
@@ -37,18 +35,18 @@
 
   let geometryToItem: {[threeGeometryId: string]: Item} = {};
 
-  setContext('viewport', {
+  setContext<ViewportContext>('viewport', {
     getScene: () => scene,
     getCamera: () => camera,
     getRenderer: () => renderer,
 
-    registerItem: (threeGeometryId: string, item: Item) => {
+    registerItem: (threeGeometryId, item) => {
       geometryToItem[threeGeometryId] = item;
     },
-    deregisterItem: (threeGeometryId: string) => {
+    deregisterItem: (threeGeometryId) => {
       delete geometryToItem[threeGeometryId];
     },
-    getItemWithThreeGeometry(threeGeometryId: string): Item | null {
+    getItemWithThreeGeometry: (threeGeometryId) => {
       return geometryToItem[threeGeometryId] || null;
     },
   });
@@ -74,6 +72,10 @@
     container.addEventListener('click', onClick);
 
     resizeObserver = new ResizeObserver(entries => {
+      if (!camera || !renderer) {
+        return;
+      }
+
       const bbox = entries[0].contentRect;
       camera.aspect = bbox.width / bbox.height;
       renderer.setSize(bbox.width, bbox.height);
@@ -96,6 +98,10 @@
     scene.add(axes);
 
     function animate() {
+      if (!scene || !camera || !renderer) {
+        return;
+      }
+
       // required if controls.enableDamping or controls.autoRotate are set to true
       controls.update();
 
@@ -105,11 +111,8 @@
     animate();
   });
 
-  function onMouseMove(event) {
-    if (!camera) {
-      return;
-    }
-    if (!scene) {
+  function onMouseMove(event: MouseEvent) {
+    if (!camera || !scene || !renderer) {
       return;
     }
 
@@ -159,7 +162,7 @@
     if (currentAnimationFrameId !== null) {
       cancelAnimationFrame(currentAnimationFrameId);
     }
-    if (resizeObserver) {
+    if (resizeObserver && renderer?.domElement) {
       resizeObserver.unobserve(renderer.domElement);
     }
     if (container) {
@@ -172,7 +175,11 @@
 <Viewcube camera={ctx && ctx.camera} on:complete={() => ctx && ctx.invalidate()} />
 -->
 
-<div class="container" bind:this={container}></div>
+<div
+  class="container"
+  bind:this={container}
+  style:cursor={$HighlightedItemStore ? 'pointer' : 'default'}
+></div>
 
 {#each $SurfaceStore.items as surface (surface.id)}
   <ViewportSurface surface={surface} />

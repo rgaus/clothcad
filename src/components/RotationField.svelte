@@ -24,7 +24,7 @@
 
 const DRAG_DEGREES_PER_PIXEL = 0.5;
   let initialValue = 0, startX = 0, startY = 0;
-  function onMouseMove(e) {
+  function onMouseMove(e: MouseEvent) {
     const currentX = e.clientX;
     const currentY = e.clientY;
 

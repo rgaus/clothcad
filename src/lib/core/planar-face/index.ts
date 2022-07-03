@@ -12,9 +12,10 @@ import {
   spacialDistance,
   POINT_IN_POLYGON,
 } from '../utils';
-import { distanceToPolygon } from 'distance-to-polygon/lib/distance-to-polygon.js';
+import { distanceToPolygon } from '$lib/distance-to-polygon';
 
 import type { PlanarFace as PlanarFaceDefinition } from './definition';
+import type { FixMe } from '$lib/types/fixme';
 
 type PlanarFaceCreateRectangleOptions = {
   pitchInDegrees: number,
@@ -330,10 +331,7 @@ export const PlanarFace = {
     bisectLinePointA: PlanarCoordinates,
     bisectLinePointB: PlanarCoordinates,
   ): [PlanarFace, PlanarFace] {
-    const origin = face.origin;
     const bisectLine: [PlanarCoordinates, PlanarCoordinates] = [bisectLinePointA, bisectLinePointB];
-
-    const convertedPoints = face.points.map(p => SpacialCoordinates.toPlanarCoordinates(p, face));
 
     const leftPoints: Array<PlanarCoordinates> = [];
     const rightPoints: Array<PlanarCoordinates> = [];
@@ -345,7 +343,7 @@ export const PlanarFace = {
       ) > 0;
     };
 
-    console.log('lines', PlanarFace.calculatePerimeterLineSegments(face));
+    /* console.log('lines', PlanarFace.calculatePerimeterLineSegments(face)); */
 
     // Loop through each perimeter line segment of the face
     for (let [pointA, pointB] of PlanarFace.calculatePerimeterLineSegments(face)) {
@@ -361,14 +359,14 @@ export const PlanarFace = {
         const resultb = distanceToPolygon(
           [intersectionPoint.x, intersectionPoint.y],
           convertedPoints.map(p => [p.x, p.y]),
-          n => n,
+          (n: FixMe) => n,
         );
         if (resultb > 0.001) {
           intersectionPoint = null;
         }
       }
 
-      console.log('PT', [pointA, pointB], bisectLine, intersectionPoint);
+      /* console.log('PT', [pointA, pointB], bisectLine, intersectionPoint); */
 
       // Push a new item onto the end of an array if the last item of the array doesn't equal that
       // item already
@@ -429,8 +427,8 @@ export const PlanarFace = {
       rightPoints.splice(rightPoints.length-1, 1);
     }
 
-    console.log('INPUT', PlanarFace.calculatePerimeterLineSegments(face));
-    console.log('RESULT', leftPoints, rightPoints);
+    /* console.log('INPUT', PlanarFace.calculatePerimeterLineSegments(face)); */
+    /* console.log('RESULT', leftPoints, rightPoints); */
 
     const leftPointsSpacial = leftPoints.map(p => PlanarCoordinates.toSpacialCoordinates(p, face));
     const rightPointsSpacial = rightPoints.map(p => PlanarCoordinates.toSpacialCoordinates(p, face));

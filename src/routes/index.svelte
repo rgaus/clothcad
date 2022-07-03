@@ -2,35 +2,20 @@
   import { onMount, onDestroy } from 'svelte';
 
   import {
-    PlanarCoordinates,
-    SpacialCoordinates,
-    SVGCoordinates,
-    LinearFold,
-    PlanarFace,
     Surface,
-    radiansToDegrees,
-    degreesToRadians,
-    intersection,
-    POINT_IN_POLYGON,
-    pointInPolygon,
-    planarDistance,
-    spacialDistance,
-    round,
   } from '$lib/core'
   import Layout from '../components/Layout.svelte';
   import AppBar from '../components/AppBar.svelte';
   import Button from '../components/Button.svelte';
-  import ButtonGroup from '../components/ButtonGroup.svelte';
-  import Stack from '../components/Stack.svelte';
   import Treeview from '../components/Treeview.svelte';
   import Toolbar from '../components/Toolbar.svelte';
   import FocusedSurfacePanel from '../components/FocusedSurfacePanel.svelte';
   import FocusedFoldPanel from '../components/FocusedFoldPanel.svelte';
   import Viewport from '../components/Viewport.svelte';
 
-  import { SurfaceStore, PickingItemStore, ActionStore, FocusedItemStore } from '$lib/stores';
+  import { SurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
 
-  let surface: Surface, surfaceA: Surface, surfaceB: Surface;
+  let surface: Surface;
 
   onMount(() => {
     surface = Surface.createFromSVG(
@@ -59,15 +44,6 @@
         return rect;
       },
     );
-    /* surface.visible = false; */
-
-    /* const primaryFold = surface.folds[0]; */
-    /* [surfaceA, surfaceB] = Surface.bisect(surface, primaryFold); */
-    /*  */
-    /* surfaceA = Surface.rotate(surfaceA, LinearFold.toSpacial(primaryFold, surface), 45); */
-    /*  */
-    /* primaryFold.surfaceAId = surfaceA.id; */
-    /* primaryFold.surfaceBId = surfaceB.id; */
 
     if ($SurfaceStore.items.length === 0) {
       SurfaceStore.createMutation({

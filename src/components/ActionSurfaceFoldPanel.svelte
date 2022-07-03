@@ -13,8 +13,12 @@
 
   onMount(() => {
     ActionStore.registerComplete(async () => {
+      if (!focusedSurface) {
+        return;
+      }
+
       SurfaceStore.createMutation({
-        forwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees], context) => {
+        forwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
           const parentSurface = SurfaceStore.get(value, parentSurfaceId);
           if (!parentSurface) {
             throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
@@ -40,7 +44,7 @@
 
           return SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
         },
-        backwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees], context) => {
+        backwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
           const parentSurface = SurfaceStore.get(value, parentSurfaceId);
           if (!parentSurface) {
             throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
@@ -64,7 +68,7 @@
 
           return SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
         },
-        requireFreshlyCreated: (args, context) => [
+        requireFreshlyCreated: (args) => [
           { itemType: 'surface', itemId: args[2] },
         ],
       })(focusedSurface.parentId, focusedFoldId, focusedSurface.id, angle);

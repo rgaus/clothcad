@@ -1,6 +1,6 @@
 <script lang="ts">
-  export let top: number = 0;
-  export let left: number = 0;
+  export let top: string = '0px';
+  export let left: string = '0px';
   export let height: string = 'auto';
   export let width: string = "300px";
   export let hidden: boolean = false;

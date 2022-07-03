@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy, getContext } from 'svelte';
-  import { Surface, PlanarFace, SpacialCoordinates } from '$lib/core';
-  import { Cyan4, COLORS, toRawHex } from '$lib/color';
+  import { SpacialCoordinates } from '$lib/core';
+  import type { Surface, PlanarFace, LinearFold } from '$lib/core';
+  import { Cyan7, COLORS, toRawHex } from '$lib/color';
   import { HighlightedItemStore, Item } from '$lib/stores';
   import {
     Mesh,
@@ -10,11 +11,11 @@
     Path,
     ExtrudeGeometry,
     Quaternion,
-    Vector3,
     BufferGeometry,
     LineBasicMaterial,
     Line,
   } from 'three';
+  import type { ViewportContext } from '$lib/viewport-context';
 
   export let surface: Surface;
 
@@ -22,9 +23,9 @@
   let mesh: Mesh | null = null;
   let lastFacePoints: PlanarFace["points"] = [];
   let lastFolds: Surface["folds"] = [];
-  let lastColorFamily: Surface["colorFamily"] = null;
+  let lastColorFamily: Surface["colorFamily"] | null = null;
 
-  const viewport = getContext('viewport');
+  const viewport = getContext<ViewportContext>('viewport');
 
   function getSurfaceColor(): string {
     const isHighlighted = HighlightedItemStore.isHighlighted($HighlightedItemStore, "surface", surface.id);
@@ -32,8 +33,8 @@
     return color;
   }
 
-  function getFoldColor(fold: LinearFold): strin {
-    return HighlightedItemStore.isHighlighted($HighlightedItemStore, "fold", fold.id) ? Cyan4 : COLORS[surface.colorFamily].dark;
+  function getFoldColor(fold: LinearFold): string {
+    return HighlightedItemStore.isHighlighted($HighlightedItemStore, "fold", fold.id) ? Cyan7 : COLORS[surface.colorFamily].dark;
   }
 
   function onPointsChanged() {
@@ -75,7 +76,7 @@
     viewport.registerItem(mesh.id, Item.surface(surface.id));
   }
 
-  let foldMeshes: Array<Line> = [];
+  let foldMeshes: Array<Line<BufferGeometry, LineBasicMaterial>> = [];
   function onFoldsChanged() {
     const scene = viewport.getScene();
     if (!scene) {
@@ -109,6 +110,8 @@
           line.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
           line.position.set(surface.face.origin.x, surface.face.origin.y, surface.face.origin.z);
+
+          line.visible = surface.visible;
 
           scene.add(line);
           foldMeshes.push(line);
@@ -155,7 +158,7 @@
     onMetadataChanged();
   }
 
-  HighlightedItemStore.subscribe(highlightedItem => {
+  HighlightedItemStore.subscribe(() => {
     if (!material) {
       return;
     }
@@ -164,11 +167,7 @@
     material.color.set(color);
     material.emissive.set(color);
 
-    for (let i = 0; i < surface.folds.length; i += 1) {
-      const fold = surface.folds[i];
-      const color = getFoldColor(fold);
-      foldMeshes[i].material.color.set(color);
-    }
+    onFoldsChanged();
   });
 
   onDestroy(() => {

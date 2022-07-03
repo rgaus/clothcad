@@ -4,7 +4,16 @@ type ColorFamily = {
   textColor: 'light' | 'dark';
 };
 
-export const Cyan4 = "#5cdbd3";
+export const Cyan1 = '#e6fffb';
+export const Cyan2 = '#b5f5ec';
+export const Cyan3 = '#87e8de';
+export const Cyan4 = '#5cdbd3';
+export const Cyan5 = '#36cfc9';
+export const Cyan6 = '#13c2c2';
+export const Cyan7 = '#08979c';
+export const Cyan8 = '#006d75';
+export const Cyan9 = '#00474f';
+export const Cyan10 = '#002329';
 
 export const COLORS: { [colorFamilyName: string]: ColorFamily} = {
   red: { light: '#ffa39e', dark: '#ff4d4f', textColor: 'light' },

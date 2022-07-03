@@ -1,33 +1,37 @@
 import { writable } from 'svelte/store';
 import type { Writable } from 'svelte/store';
-import type { Component } from 'svelte';
+// import type { SvelteComponent } from 'svelte';
 
-import { Surface } from '$lib/core';
+import type { Surface, LinearFold } from '$lib/core';
+import type { FixMe } from '$lib/types/fixme';
 
 import ActionSurfaceSplitPanel from '../components/ActionSurfaceSplitPanel.svelte';
 import ActionSurfaceFoldPanel from '../components/ActionSurfaceFoldPanel.svelte';
 
-type CollectionStoreAPI<T extends {id: string}, U extends { items: Array<T> }> = Writable<U> & {
-  list: (value: U) => Array<T>;
-  get: (value: U, itemId: T['id']) => T | null;
-  add: (item: T) => void;
-  update: (itemId: T['id'], updater: (item: T) => T) => void;
-  remove: (itemId: T['id']) => void;
+type CollectionStoreBaseMethods<T extends { items: Array<{id: string}> }> = Writable<T> & {
+  list: (value: T) => Array<T['items'][0]>;
+  get: (value: T, itemId: T['items'][0]['id']) => T['items'][0] | null;
+  addItem: (item: T['items'][0]) => void;
+  updateItem: (itemId: T['items'][0]['id'], updater: (item: T['items'][0]) => T['items'][0]) => void;
+  removeItem: (itemId: T['items'][0]['id']) => void;
 };
 
-function createCollectionStore<T extends {id: string}, U extends { items: Array<T> }>(
-  initialValue={ items: [] },
-): CollectionStoreAPI<T, U> {
-  const store = writable<U>(initialValue);
+const COLLECTION_STORE_DEFAULT_INITIAL_STATE: FixMe = { items: [] };
+
+function createCollectionStore<T extends { items: Array<{id: string}> }>(
+  initialValue: T = COLLECTION_STORE_DEFAULT_INITIAL_STATE
+): CollectionStoreBaseMethods<T> {
+  type CollectionItem = T['items'][0];
+  const store = writable<T>(initialValue);
 
   return {
     ...store,
 
-    list(value: U): Array<T> {
+    list(value: T): Array<CollectionItem> {
       return value.items;
     },
 
-    get(value: U, itemId: T['id']): T | null {
+    get(value: T, itemId: CollectionItem['id']): CollectionItem | null {
       const item = value.items.find(n => n.id === itemId);
       if (!item) {
         return null;
@@ -35,11 +39,11 @@ function createCollectionStore<T extends {id: string}, U extends { items: Array<
       return item;
     },
 
-    addItem(item: T) {
+    addItem(item: CollectionItem) {
       store.update(value => ({...value, items: [...value.items, item]}));
     },
 
-    updateItem(itemId: T['id'], updater: (item: T) => T) {
+    updateItem(itemId: CollectionItem['id'], updater: (item: CollectionItem) => CollectionItem) {
       store.update(value => {
         const newValue = {
           ...value,
@@ -49,7 +53,7 @@ function createCollectionStore<T extends {id: string}, U extends { items: Array<
       });
     },
 
-    removeItem(itemId: T['id']) {
+    removeItem(itemId: CollectionItem['id']) {
       store.update(value => {
         return { ...value, items: value.items.filter(n => n.id !== itemId) }
       });
@@ -57,14 +61,14 @@ function createCollectionStore<T extends {id: string}, U extends { items: Array<
   };
 }
 
-type SurfaceHistoryContext = object;
+type SurfaceHistoryContext = FixMe<any>;
 
-type SurfaceHistoryListItem = {
+type SurfaceHistoryListItem<A = Array<FixMe>, C = object> = {
   updatedAt: string;
-  forwards: (value: SurfaceStoreState, context: SurfaceHistoryContext) => SurfaceStoreState;
-  backwards: (value: SurfaceStoreState, context: SurfaceHistoryContext) => SurfaceStoreState;
-  args: Array<any>;
-  context?: SurfaceHistoryContext;
+  forwards: (value: SurfaceStoreState, args: Array<FixMe>, context: SurfaceHistoryContext) => SurfaceStoreState;
+  backwards: (value: SurfaceStoreState, args: Array<FixMe>, context: SurfaceHistoryContext) => SurfaceStoreState;
+  args: A;
+  context: C;
 
   // requireExists?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
   requireFreshlyCreated?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
@@ -77,18 +81,26 @@ type SurfaceStoreState = {
 };
 
 const SurfaceStore = {
-  ...createCollectionStore<Surface, SurfaceStoreState>({
+  ...createCollectionStore<SurfaceStoreState>({
     items: [],
     history: [],
     currentHistoryIndex: -1,
   }),
 
-  createMutation(historyItem: Omit<SurfaceHistoryListItem, 'updatedAt'>) {
-    return (...args) => {
+  createMutation<A extends Array<FixMe> = Array<FixMe>, C = object>(
+    historyItemParams: Omit<
+      SurfaceHistoryListItem<A, C>,
+      'updatedAt' | 'args' | 'context'
+    > & { context?: C }
+  ) {
+    return (...args: A) => {
       SurfaceStore.update(value => {
-        historyItem.args = args;
-        historyItem.context = historyItem.context || {};
-        historyItem.updatedAt = new Date().toISOString();
+        const historyItem: SurfaceHistoryListItem = {
+          ...historyItemParams,
+          args,
+          context: historyItemParams.context || {},
+          updatedAt: new Date().toISOString(),
+        };
 
         const originalValue = value;
 
@@ -219,8 +231,8 @@ const SurfaceStore = {
     return SurfaceStore.historyGo(index, true);
   },
 
-  historyUndo(): SurfaceStoreState { return SurfaceStore.historyGo(-1); },
-  historyRedo(): SurfaceStoreState { return SurfaceStore.historyGo(1); },
+  historyUndo() { return SurfaceStore.historyGo(-1); },
+  historyRedo() { return SurfaceStore.historyGo(1); },
 
   addItem(value: SurfaceStoreState, item: Surface): SurfaceStoreState {
     return {
@@ -229,7 +241,7 @@ const SurfaceStore = {
     };
   },
 
-  updateItem(value: SurfaceStoreState, itemId: Surface['id'], updater: Surface | (item: Surface) => Surface) {
+  updateItem(value: SurfaceStoreState, itemId: Surface['id'], updater: Surface | ((item: Surface) => Surface)) {
     return {
       ...value,
       items: value.items.map(n => {
@@ -254,16 +266,16 @@ const SurfaceStore = {
     };
   },
 
-  listFolds(value: SurfaceStoreState): Array<Fold> {
-    return value.items.flatMap(value => {
-      return items.folds;
+  listFolds(value: SurfaceStoreState): Array<LinearFold> {
+    return value.items.flatMap(surface => {
+      return surface.folds;
     });
   },
-  getFold(value: SurfaceStoreState, foldId: LinearFold['id']): Fold | null {
+  getFold(value: SurfaceStoreState, foldId: LinearFold['id']): LinearFold | null {
     const foldList = value.items.flatMap(surface => surface.folds.filter(fold => fold.id === foldId));
     return foldList.length > 0 ? foldList[0] : null;
   },
-  updateFold(value: SurfaceStoreState, foldId: LinearFold['id'], updater: Fold | (f: Fold) => Fold): SurfaceStoreState {
+  updateFold(value: SurfaceStoreState, foldId: LinearFold['id'], updater: LinearFold | ((f: LinearFold) => LinearFold)): SurfaceStoreState {
     const items = value.items.map(surface => {
       let hit = false;
       const folds = surface.folds.map(fold => {
@@ -347,7 +359,7 @@ export const Item = {
   surface(itemId: Surface['id']): Item {
     return { itemType: 'surface', itemId };
   },
-  fold(itemId: Fold['id']): Item {
+  fold(itemId: LinearFold['id']): Item {
     return { itemType: 'fold', itemId };
   },
 };
@@ -417,7 +429,6 @@ const FocusedItemStore = {
 type PickingItemStoreEnabledState = {
   enabled: true,
   itemType: Item['itemType'],
-  resolve: (item: Item) => void;
   cancel: () => void;
 };
 type PickingItemStoreDisabledState = {
@@ -489,7 +500,7 @@ const PickingItemStore = {
         if (value && value.itemType === 'surface') {
           PickingItemStore.set({ enabled: false });
           cancel();
-          resolve(value);
+          resolve(value.itemId);
         };
       });
 
@@ -512,20 +523,17 @@ const PickingItemStore = {
 
 
 
-type Action<T extends string, T extends object> = {
+type Action<T extends string> = {
   type: T;
-  completable: boolean;
-  onComplete?: () => void;
-  onCancel?: () => void;
 };
-type ActionBaseMethods<T extends Action> = {
+type ActionBaseMethods<T extends Action<string>> = {
   create: () => T;
-  getName: (action: T) => string;
+  getName: () => string;
   isToolbarButtonEnabled: (focusedItem: Item | null, surfaceStoreState: SurfaceStoreState) => boolean;
-  getPanelComponent: () => Component | null;
+  getPanelComponent: () => FixMe | null;
 };
 
-type ActionSurfaceSplit = Action<'surface.split', { foldId: LinearFold['id'] | null }>;
+type ActionSurfaceSplit = Action<'surface.split'>;
 const ActionSurfaceSplit: ActionBaseMethods<ActionSurfaceSplit> = {
   create() {
     return { type: 'surface.split', completable: false };
@@ -539,7 +547,7 @@ const ActionSurfaceSplit: ActionBaseMethods<ActionSurfaceSplit> = {
   },
 };
 
-type ActionSurfaceFold = Action<'surface.fold', { foldId: LinearFold['id'], angleInDegrees: number }>;
+type ActionSurfaceFold = Action<'surface.fold'>;
 const ActionSurfaceFold: ActionBaseMethods<ActionSurfaceFold> = {
   create() {
     return { type: 'surface.fold', completable: false };
@@ -569,17 +577,21 @@ const ActionSurfaceFold: ActionBaseMethods<ActionSurfaceFold> = {
   },
 };
 
-type Action = (
-  | ActionSurfaceSplit
-  | ActionSurfaceFold
-);
 
-type ActionStoreState = {enabled: true, action: Action, ActionType: ActionBaseMethods} | {enabled: false};
+type ActionStoreState = {
+  enabled: true,
+  action: Action<string>,
+  ActionType: ActionBaseMethods<Action<string>>,
+  completable: boolean;
+
+  onComplete?: () => Promise<void>;
+  onCancel?: () => Promise<void>;
+} | {enabled: false};
 
 const ActionStore = {
   ...writable<ActionStoreState>({enabled: false}),
 
-  getActionsForFocusedItem(item: Item | null) {
+  getActionsForFocusedItem(item: Item | null): Array<ActionBaseMethods<Action<string>> | Array<ActionBaseMethods<Action<string>>>> {
     if (!item) {
       return [];
     }
@@ -597,10 +609,11 @@ const ActionStore = {
     }
   },
 
-  begin(ActionType: Action) {
+  begin(ActionType: ActionBaseMethods<Action<string>>) {
     ActionStore.set({
       enabled: true,
       action: ActionType.create(),
+      completable: false,
       ActionType,
     });
   },

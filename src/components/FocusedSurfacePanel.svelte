@@ -1,19 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { SurfaceStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
-  import { Surface, LinearFold, PlanarFace } from '$lib/core';
+  import type { Surface } from '$lib/core';
 
   import Panel from './Panel.svelte';
   import PanelBody from './PanelBody.svelte';
-  import RotationField from './RotationField.svelte';
-  import FoldField from './FoldField.svelte';
   import ColorFamilyField from './ColorFamilyField.svelte';
 
   let focusedSurface: Surface | null;
-
-  let pitch = 0;
-  let yaw = 0;
-  let roll = 0;
 
   let unsubscribeFocusedSurface: (() => void) | null = null;
   onMount(() => {
@@ -32,6 +26,10 @@
       Color: <ColorFamilyField
         value={focusedSurface.colorFamily}
         on:change={event => {
+          if (!focusedSurface) {
+            return;
+          }
+
           const originalColorFamily = focusedSurface.colorFamily;
           const colorFamily = event.detail;
           if (originalColorFamily === colorFamily) {

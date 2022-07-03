@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
 
-  const inButtonGroup = getContext('button-in-group') || (() => false);
+  const inButtonGroup: () => boolean = getContext('button-in-group') || (() => false);
 
   export let variant: 'default' | 'primary' = 'default';
   export let text: string = '';

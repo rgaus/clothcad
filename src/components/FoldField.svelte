@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LinearFold, Surface } from '$lib/core';
+  import type { LinearFold, Surface } from '$lib/core';
   import { FocusedItemStore, PickingItemStore } from '$lib/stores';
 
   export let value: LinearFold['id'] | null = null;
@@ -44,7 +44,7 @@
 </style>
 
 <div class="faceFieldWrapper">
-  <select bind:value={value} class:invalid={!foldIds.includes(value)}>
+  <select bind:value={value} class:invalid={!foldIds.includes(value || '')}>
     {#each surface.folds as fold (fold.id)}
       <option value={fold.id}>{fold.id}</option>
     {/each}

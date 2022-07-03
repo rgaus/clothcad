@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as THREE from 'three';
 	import * as SC from 'svelte-cubed';
-	import { setup } from 'svelte-cubed/utils/context';
 	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -43,7 +42,7 @@
     }
 	});
 
-  export type Orientation = {
+  type Orientation = {
     offsetFactor: {
       x: number;
       y: number;
@@ -186,14 +185,14 @@
     z-index: 2;
   }
 
-  .cube {
-    width: 100px;
-    height: 100px;
-    position: relative;
-    transform-style: preserve-3d;
-    transform: translateZ(-300px);
-    text-transform: uppercase;
-  }
+  /* .cube { */
+  /*   width: 100px; */
+  /*   height: 100px; */
+  /*   position: relative; */
+  /*   transform-style: preserve-3d; */
+  /*   transform: translateZ(-300px); */
+  /*   text-transform: uppercase; */
+  /* } */
   .cube__face {
     display: flex;
     justify-content: center;
