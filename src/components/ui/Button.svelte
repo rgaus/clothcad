@@ -36,6 +36,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-grow: 0;
+    flex-shrink: 0;
   }
   .button:hover {
     background-color: var(--gray-6);
