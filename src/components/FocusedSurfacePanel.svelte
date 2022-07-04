@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { SurfaceStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { SurfaceStore, HistoryStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
   import type { Surface } from '$lib/core';
 
   import Panel from './ui/Panel.svelte';
@@ -50,22 +50,24 @@
               return;
             }
 
-            SurfaceStore.createMutation({
+            HistoryStore.createMutation({
               forwards: (value, [surfaceId]) => {
-                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                   return {
                     ...surface,
                     colorFamily,
                   };
                 });
+                return { SurfaceStore: newValue };
               },
               backwards: (value, [surfaceId]) => {
-                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                   return {
                     ...surface,
                     colorFamily: originalColorFamily,
                   };
                 });
+                return { SurfaceStore: newValue };
               },
             })(focusedSurface.id);
           }}
@@ -89,22 +91,24 @@
               return;
             }
 
-            SurfaceStore.createMutation({
+            HistoryStore.createMutation({
               forwards: (value, [surfaceId]) => {
-                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                   return {
                     ...surface,
                     name,
                   };
                 });
+                return { SurfaceStore: newValue };
               },
               backwards: (value, [surfaceId]) => {
-                return SurfaceStore.updateItem(value, surfaceId, surface => {
+                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                   return {
                     ...surface,
                     name: originalName,
                   };
                 });
+                return { SurfaceStore: newValue };
               },
             })(focusedSurface.id);
           }}

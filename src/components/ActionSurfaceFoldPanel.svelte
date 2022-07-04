@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { SurfaceStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { SurfaceStore, HistoryStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
   import { Surface, LinearFold } from '$lib/core';
   import Panel from './ui/Panel.svelte';
   import FoldField from './ui/FoldField.svelte';
@@ -17,8 +17,10 @@
         return;
       }
 
-      SurfaceStore.createMutation({
-        forwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
+      HistoryStore.createMutation({
+        forwards: (storeValues, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
+          let value = storeValues.SurfaceStore;
+
           const parentSurface = SurfaceStore.get(value, parentSurfaceId);
           if (!parentSurface) {
             throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
@@ -42,9 +44,12 @@
 
           console.log('ROTATED', surfaceToRotate);
 
-          return SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
+          value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
+          return { SurfaceStore: value };
         },
-        backwards: (value, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
+        backwards: (storeValues, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
+          let value = storeValues.SurfaceStore;
+
           const parentSurface = SurfaceStore.get(value, parentSurfaceId);
           if (!parentSurface) {
             throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
@@ -66,7 +71,8 @@
             -1 * rotationInDegrees,
           );
 
-          return SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
+          value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
+          return { SurfaceStore: value };
         },
         requireFreshlyCreated: (args) => [
           { itemType: 'surface', itemId: args[2] },

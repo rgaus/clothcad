@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { SurfaceStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { SurfaceStore, HistoryStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
   import { Surface, LinearFold } from '$lib/core';
+  import type { FixMe } from '$lib/types/fixme';
   import Panel from './ui/Panel.svelte';
   import FoldField from './ui/FoldField.svelte';
 
@@ -14,7 +15,7 @@
         return;
       }
 
-      SurfaceStore.createMutation<
+      HistoryStore.createMutation<
         [Surface['id'] | null, LinearFold['id'] | null],
         {
           surfaceAId?: Surface['id'],
@@ -23,10 +24,20 @@
           surfaceBFoldIds?: Array<LinearFold['id']>,
         }
       >({
-        forwards: (value, [parentSurfaceId, foldId], context) => {
+        forwards: (storeValues, [parentSurfaceId, foldId], context) => {
+          let value = storeValues.SurfaceStore;
+
+          if (!parentSurfaceId) {
+            throw new Error(`Cannot find parent surface, the specified id was null!`);
+          }
+
           const parentSurface = SurfaceStore.get(value, parentSurfaceId);
           if (!parentSurface) {
             throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
+          }
+
+          if (!foldId) {
+            throw new Error(`Cannot find fold, the specified id was null!`);
           }
 
           const fold = SurfaceStore.getFold(value, foldId);
@@ -44,7 +55,7 @@
             surfaceA.id = context.surfaceAId;
             surfaceA.folds = surfaceA.folds.map((fold, index) => ({
               ...fold,
-              id: context.surfaceAFoldIds[index] || fold.id,
+              id: (context.surfaceAFoldIds as FixMe)[index] || fold.id,
             }));
           } else {
             context.surfaceAId = surfaceA.id;
@@ -54,7 +65,7 @@
             surfaceB.id = context.surfaceBId;
             surfaceB.folds = surfaceB.folds.map((fold, index) => ({
               ...fold,
-              id: context.surfaceBFoldIds[index] || fold.id,
+              id: (context.surfaceBFoldIds as FixMe)[index] || fold.id,
             }));
           } else {
             context.surfaceBId = surfaceB.id;
@@ -72,9 +83,17 @@
             surfaceBId: surfaceB.id,
           }));
 
-          return value;
+          return { SurfaceStore: value };
         },
-        backwards: (value, [parentSurfaceId, foldId], context) => {
+        backwards: (storeValues, [parentSurfaceId, foldId], context) => {
+          let value = storeValues.SurfaceStore;
+
+          if (!parentSurfaceId) {
+            throw new Error(`Cannot find parent surface, the specified id was null!`);
+          }
+          if (!foldId) {
+            throw new Error(`Cannot find fold, the specified id was null!`);
+          }
           if (!context.surfaceAId) {
             throw new Error(`context.surfaceAId is not set!`);
           }
@@ -100,7 +119,7 @@
             surfaceBId: null,
           }));
 
-          return value;
+          return { SurfaceStore: value };
         },
       })(focusedSurface.id, focusedFoldId);
     });

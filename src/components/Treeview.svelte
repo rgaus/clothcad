@@ -1,7 +1,7 @@
 <script lang="ts">
   import { COLORS } from '$lib/color';
 
-  import { SurfaceStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
+  import { SurfaceStore, HistoryStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
 
   import Panel from './ui/Panel.svelte';
 
@@ -171,22 +171,24 @@
 
                 const initialSurfaceVisibility = surface.visible;
 
-                SurfaceStore.createMutation({
+                HistoryStore.createMutation({
                   forwards: (value, [surfaceId]) => {
-                    return SurfaceStore.updateItem(value, surfaceId, surface => {
+                    const newValue =SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                       return {
                         ...surface,
                         visible: !initialSurfaceVisibility,
                       };
                     });
+                    return { SurfaceStore: newValue };
                   },
                   backwards: (value, [surfaceId]) => {
-                    return SurfaceStore.updateItem(value, surfaceId, surface => {
+                    const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                       return {
                         ...surface,
                         visible: initialSurfaceVisibility,
                       };
                     });
+                    return { SurfaceStore: newValue };
                   },
                 })(surface.id);
               }}

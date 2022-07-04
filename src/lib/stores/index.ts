@@ -8,6 +8,7 @@ import { ActionStore } from './ActionStore';
 import { SurfaceStore } from './SurfaceStore';
 import type { SurfaceStoreState } from './SurfaceStore';
 import { FocusedItemStore } from './FocusedItemStore';
+import { HistoryStore } from './HistoryStore';
 
 const HighlightedItemStore = {
   ...writable<Item | null>(null),
@@ -130,4 +131,11 @@ const PickingItemStore = {
 };
 
 
-export { SurfaceStore, HighlightedItemStore, FocusedItemStore, PickingItemStore, ActionStore };
+export {
+  SurfaceStore,
+  HighlightedItemStore,
+  FocusedItemStore,
+  PickingItemStore,
+  ActionStore,
+  HistoryStore,
+};

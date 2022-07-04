@@ -13,7 +13,7 @@
   import FocusedFoldPanel from '../components/FocusedFoldPanel.svelte';
   import Viewport from '../components/Viewport.svelte';
 
-  import { SurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { HistoryStore, SurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
 
   let surface: Surface;
 
@@ -46,16 +46,13 @@
     );
 
     if ($SurfaceStore.items.length === 0) {
-      SurfaceStore.createMutation({
+      HistoryStore.createMutation({
         forwards: value => {
-          value = SurfaceStore.addItem(value, surface);
-          /* value = SurfaceStore.addItem(value, surfaceA); */
-          /* value = SurfaceStore.addItem(value, surfaceB); */
-          return value;
+          return { SurfaceStore: SurfaceStore.addItem(value.SurfaceStore, surface) };
         },
         backwards: value => {
           if (surface) {
-            value = SurfaceStore.removeItem(value, surface.id);
+            value = {SurfaceStore: SurfaceStore.removeItem(value.SurfaceStore, surface.id)};
           }
           /* surfaceA && SurfaceStore.removeItem(surfaceA); */
           /* surfaceB && SurfaceStore.removeItem(surfaceB); */

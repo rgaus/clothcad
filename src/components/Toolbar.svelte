@@ -3,7 +3,7 @@
   import ButtonGroup from '../components/ui/ButtonGroup.svelte';
   import Stack from '../components/ui/Stack.svelte';
 
-  import { SurfaceStore, FocusedItemStore, ActionStore, PickingItemStore } from '$lib/stores';
+  import { HistoryStore, SurfaceStore, FocusedItemStore, ActionStore, PickingItemStore } from '$lib/stores';
 </script>
 
 <style>
@@ -45,12 +45,12 @@
         <Button
           size="large"
           variant="primary"
-          on:click={() => SurfaceStore.historyUndo()}
+          on:click={() => HistoryStore.undo()}
           text="Undo"
         />
         <Button
           size="large"
-          on:click={() => SurfaceStore.historyRedo()}
+          on:click={() => HistoryStore.redo()}
           text="Redo"
         />
       </ButtonGroup>
