@@ -29,8 +29,9 @@ const updateStoreValues = (initialStoreValues: StoreValues, storeValues: StoreVa
   }
 };
 
-type HistoryListItem<A = Array<any>, C = object> = {
+export type HistoryListItem<A = Array<any>, C = object> = {
   id: string;
+  name: string;
   updatedAt: string;
   forwards: (value: StoreValues, args: A, context: C) => StoreValues;
   backwards: (value: StoreValues, args: A, context: C) => StoreValues;
@@ -391,6 +392,16 @@ export const HistoryStore = {
       console.log('END', newValue);
 
       updateStoreValues(initialStoreValues, newStoreValues);
+      return newValue;
+    });
+  },
+
+  updateHistoryItem(historyItemId: HistoryListItem['id'], updater: (item: HistoryListItem) => HistoryListItem) {
+    return HistoryStore.update(value => {
+      const newValue = {
+        ...value,
+        history: value.history.map(n => n.id === historyItemId ? updater(n) : n),
+      };
       return newValue;
     });
   },

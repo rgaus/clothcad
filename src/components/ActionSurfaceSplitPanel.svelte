@@ -24,6 +24,7 @@
           surfaceBFoldIds?: Array<LinearFold['id']>,
         }
       >({
+        name: `Split ${focusedSurface.name} at ${focusedFoldId}`,
         forwards: (storeValues, [parentSurfaceId, foldId], context) => {
           let value = storeValues.SurfaceStore;
 

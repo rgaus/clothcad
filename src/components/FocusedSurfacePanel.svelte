@@ -51,6 +51,7 @@
             }
 
             HistoryStore.createMutation({
+              name: `Color ${focusedSurface.name} ${focusedSurface.colorFamily}`,
               forwards: (value, [surfaceId]) => {
                 const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                   return {
@@ -92,6 +93,7 @@
             }
 
             HistoryStore.createMutation({
+              name: `Rename to ${name}`,
               forwards: (value, [surfaceId]) => {
                 const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                   return {

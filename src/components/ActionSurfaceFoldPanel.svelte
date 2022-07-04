@@ -18,6 +18,7 @@
       }
 
       HistoryStore.createMutation({
+        name: `Fold ${focusedSurface.name} to ${angle}deg`,
         forwards: (storeValues, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
           let value = storeValues.SurfaceStore;
 

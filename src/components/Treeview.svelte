@@ -2,12 +2,18 @@
   import { COLORS } from '$lib/color';
 
   import { SurfaceStore, HistoryStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
+  import type { HistoryListItem } from '$lib/stores/HistoryStore';
 
   import Panel from './ui/Panel.svelte';
+  import TextField from './ui/TextField.svelte';
+  import Button from './ui/Button.svelte';
 
-  type TabItem = 'drawing' | 'surface' | 'fold';
+  type TabItem = 'drawing' | 'surface' | 'fold' | 'history';
 
   let activeTab: TabItem = 'surface';
+
+  let focusedHistoryItemId: HistoryListItem['id'] | null = null;
+  let focusedHistoryItemName = '';
 
   FocusedItemStore.subscribe(focusedItem => {
     if (focusedItem && focusedItem.itemType !== activeTab) {
@@ -19,7 +25,12 @@
 <style>
   @import "../styles/variables.css";
 
+  :root {
+    --treeview-default-width: 300px;
+  }
+
   .wrapper {
+    position: relative;
     padding: var(--space-2);
     color: var(--gray-4);
     background-color: var(--gray-9);
@@ -35,6 +46,7 @@
     margin-bottom: var(--space-2);
     overflow: hidden;
     height: var(--space-8);
+    width: calc(var(--treeview-default-width) - var(--space-6));
   }
 
   .tab {
@@ -61,12 +73,25 @@
     color: var(--gray-9);
   }
 
+  .activeline {
+    --activeline-width: var(--space-1);
+    position: absolute;
+    margin-left: calc(-1 * (var(--activeline-width) / 2));
+    margin-top: calc(-1 * var(--border-radius-2));
+    width: var(--activeline-width);
+    background-color: var(--cyan-8);
+    z-index: 999;
+    border-top-left-radius: var(--border-radius-2);
+    border-top-right-radius: var(--border-radius-2);
+  }
+
   .list {
     list-style-type: none;
     padding: 0px;
     margin: 0px;
   }
   .item {
+    position: relative;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -79,7 +104,7 @@
     font-weight: var(--font-weight-medium);
     margin-bottom: var(--space-1);
   }
-  .item.highlighted, .item:active {
+  .item.highlighted, .item:hover, .item:active {
     background-color: var(--gray-8);
   }
   .item.focused {
@@ -115,15 +140,50 @@
     color: var(--gray-8);
   }
 
+  .lineset {
+    display: flex;
+    width: var(--space-8);
+    height: var(--space-8);
+    background-color: var(--gray-6);
+    padding-left: var(--space-1);
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+  .line {
+    width: 1px;
+    height: 100%;
+    flex-grow: 0;
+    flex-shrink: 0;
+    margin-right: var(--space-1);
+  }
+
+  .currentItemMarker {
+    position: absolute;
+    bottom: calc(-1 * var(--space-1));
+    left: calc(-1 * var(--space-1));
+    width: var(--space-2);
+    height: var(--space-2);
+    border-radius: 99999999px;
+    background-color: var(--cyan-4);
+    border: 1px solid var(--cyan-1);
+    z-index: 9999;
+  }
+
   .label {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
     padding-right: var(--space-1);
+    flex-grow: 1;
+    flex-shrink: 1;
   }
 </style>
 
-<Panel width="300px" height="100%" hidden={$PickingItemStore.enabled || $ActionStore.enabled}>
+<Panel
+  width={activeTab === 'history' ? "600px" : "var(--treeview-default-width)"}
+  height="100%"
+  hidden={$PickingItemStore.enabled || $ActionStore.enabled}
+>
   <div class="wrapper">
     <div class="tabrow">
       <button
@@ -141,6 +201,14 @@
         class:active={activeTab === "fold"}
         on:click={() => { activeTab = "fold"; }}
       >Folds</button>
+      <button
+        class="tab"
+        class:active={activeTab === "history"}
+        on:click={() => {
+          FocusedItemStore.blurItem();
+          activeTab = "history";
+        }}
+      >History</button>
     </div>
     {#if activeTab === "surface"}
       <ul class="list">
@@ -172,6 +240,7 @@
                 const initialSurfaceVisibility = surface.visible;
 
                 HistoryStore.createMutation({
+                  name: `${surface.visible ? 'Hide' : 'Show'} ${surface.name}`,
                   forwards: (value, [surfaceId]) => {
                     const newValue =SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                       return {
@@ -263,6 +332,54 @@
               </li>
             {/each}
           {/if}
+        {/each}
+      </ul>
+    {/if}
+    {#if activeTab === "history"}
+      <div class="activeline" style:height={`calc(${$HistoryStore.currentHistoryIndex+1} * var(--space-9))`} />
+      <ul class="list">
+        {#each $HistoryStore.history as historyItem, index (historyItem.id)}
+          <li
+            class="item"
+            class:focused={$HistoryStore.currentHistoryIndex === index}
+            on:click={() => HistoryStore.to(index)}
+          >
+            {#if $HistoryStore.currentHistoryIndex === index}
+              <div class="currentItemMarker" />
+            {/if}
+            <div class="lineset">
+              <div class="line" style:background-color="red" />
+              <div class="line" style:background-color="green" />
+            </div>
+            <div class="label">
+              {#if historyItem.id === focusedHistoryItemId}
+                <TextField
+                  bind:value={focusedHistoryItemName}
+                  width="100%"
+                  muted
+                  light
+                  focused
+                  on:blur={() => {
+                    HistoryStore.updateHistoryItem(historyItem.id, item => ({...item, name: focusedHistoryItemName}));
+                    focusedHistoryItemId = null;
+                  }}
+                  on:enter={() => {
+                    HistoryStore.updateHistoryItem(historyItem.id, item => ({...item, name: focusedHistoryItemName}));
+                    focusedHistoryItemId = null;
+                  }}
+                />
+              {:else}
+                {historyItem.name}
+              {/if}
+            </div>
+            <Button
+              text="Edit"
+              on:click={() => {
+                focusedHistoryItemId = historyItem.id;
+                focusedHistoryItemName = historyItem.name;
+              }}
+            />
+          </li>
         {/each}
       </ul>
     {/if}

@@ -47,6 +47,7 @@
 
     if ($SurfaceStore.items.length === 0) {
       HistoryStore.createMutation({
+        name: 'Create initial surface',
         forwards: value => {
           return { SurfaceStore: SurfaceStore.addItem(value.SurfaceStore, surface) };
         },
