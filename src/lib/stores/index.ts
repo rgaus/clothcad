@@ -5,7 +5,7 @@ import type { Surface, LinearFold } from '$lib/core';
 import type { Item } from '$lib/types/item';
 
 import { ActionStore } from './ActionStore';
-import { SurfaceStore } from './SurfaceStore';
+import { SurfaceStore, FocusedSurfaceStore, FocusedFoldStore } from './SurfaceStore';
 import type { SurfaceStoreState } from './SurfaceStore';
 import { FocusedItemStore } from './FocusedItemStore';
 import { HistoryStore } from './HistoryStore';
@@ -133,6 +133,8 @@ const PickingItemStore = {
 
 export {
   SurfaceStore,
+  FocusedSurfaceStore,
+  FocusedFoldStore,
   HighlightedItemStore,
   FocusedItemStore,
   PickingItemStore,

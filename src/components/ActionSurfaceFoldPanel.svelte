@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { SurfaceStore, HistoryStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { SurfaceStore, FocusedSurfaceStore, HistoryStore, PickingItemStore, ActionStore } from '$lib/stores';
   import { Surface, LinearFold } from '$lib/core';
   import Panel from './ui/Panel.svelte';
   import FoldField from './ui/FoldField.svelte';
@@ -80,7 +80,7 @@
       })(focusedSurface.parentId, focusedFoldId, focusedSurface.id, angle);
     });
 
-    unsubscribeFocusedSurface = SurfaceStore.subscribeToFocusedSurface($SurfaceStore, $FocusedItemStore, surface => {
+    unsubscribeFocusedSurface = FocusedSurfaceStore.subscribe(surface => {
       focusedSurface = surface;
       focusedSurfaceParent = focusedSurface && focusedSurface.parentId ? (
         SurfaceStore.get($SurfaceStore, focusedSurface.parentId)

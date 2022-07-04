@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { SurfaceStore, FocusedItemStore, ActionStore, PickingItemStore } from '$lib/stores';
+  import { onDestroy } from 'svelte';
+  import { SurfaceStore, FocusedFoldStore, ActionStore, PickingItemStore } from '$lib/stores';
   import { Surface, LinearFold } from '$lib/core';
 
   import Panel from './ui/Panel.svelte';
@@ -10,7 +11,9 @@
   let associatedSurfaceA: Surface | null;
   let associatedSurfaceB: Surface | null;
   
-  function onFocusedFoldUpdated() {
+  const unsubscribe = FocusedFoldStore.subscribe(fold => {
+    focusedFold = fold;
+
     if (!focusedFold) {
       associatedParentSurface = null
       associatedSurfaceA = null;
@@ -35,36 +38,9 @@
     } else {
       associatedSurfaceB = null;
     }
-  }
-
-  FocusedItemStore.subscribe(focusedItem => {
-    if (!focusedItem) {
-      focusedFold = null;
-      return;
-    }
-    if (focusedItem.itemType !== "fold") {
-      focusedFold = null;
-      return;
-    }
-
-    focusedFold = SurfaceStore.getFold($SurfaceStore, focusedItem.itemId);
-
-    if (focusedFold) {
-      onFocusedFoldUpdated();
-    }
   });
-  SurfaceStore.subscribe(surface => {
-    if (!focusedFold) {
-      return;
-    }
-    focusedFold = SurfaceStore.getFold(surface, focusedFold.id);
 
-    if (!focusedFold) {
-      return;
-    }
-
-    onFocusedFoldUpdated();
-  });
+  onDestroy(() => unsubscribe());
 </script>
 
 {#if focusedFold}

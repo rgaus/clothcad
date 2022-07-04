@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { SurfaceStore, HistoryStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { SurfaceStore, FocusedSurfaceStore, HistoryStore, PickingItemStore, ActionStore } from '$lib/stores';
   import { Surface, LinearFold } from '$lib/core';
   import type { FixMe } from '$lib/types/fixme';
   import Panel from './ui/Panel.svelte';
@@ -124,7 +124,7 @@
       })(focusedSurface.id, focusedFoldId);
     });
 
-    unsubscribeFocusedSurface = SurfaceStore.subscribeToFocusedSurface($SurfaceStore, $FocusedItemStore, surface => {
+    unsubscribeFocusedSurface = FocusedSurfaceStore.subscribe(surface => {
       focusedSurface = surface;
     });
   });

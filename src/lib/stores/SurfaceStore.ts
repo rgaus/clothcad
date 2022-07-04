@@ -1,8 +1,7 @@
-import { writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 import type { Writable } from 'svelte/store';
 
 import type { Surface, LinearFold } from '$lib/core';
-import type { Item } from '$lib/types/item';
 import type { FixMe } from '$lib/types/fixme';
 
 import { FocusedItemStore } from './FocusedItemStore';
@@ -65,11 +64,7 @@ export type SurfaceStoreState = {
 };
 
 export const SurfaceStore = {
-  ...createCollectionStore<SurfaceStoreState>({
-    items: [],
-    history: [],
-    currentHistoryIndex: -1,
-  }),
+  ...createCollectionStore<SurfaceStoreState>(),
 
   addItem(value: SurfaceStoreState, item: Surface): SurfaceStoreState {
     return {
@@ -140,47 +135,41 @@ export const SurfaceStore = {
   getSurfacesContainingFold(value: SurfaceStoreState, foldId: LinearFold['id']): Array<Surface> {
     return value.items.filter(surface => typeof surface.folds.find(fold => fold.id === foldId) !== 'undefined');
   },
-
-  subscribeToFocusedSurface(
-    initialSurfaceStoreState: SurfaceStoreState,
-    initialFocusedItemState: Item | null,
-    func: (s: Surface | null) => void
-  ) {
-    let focusedSurface: Surface | null = null;
-    let surfaceStoreState = initialSurfaceStoreState;
-
-    // Call subscribe syncrnously initially
-    const onFocusedItemChanged = (focusedItem: Item | null) => {
-      if (!focusedItem) {
-        focusedSurface = null;
-        func(focusedSurface);
-        return;
-      }
-      if (focusedItem.itemType !== "surface") {
-        focusedSurface = null;
-        func(focusedSurface);
-        return;
-      }
-
-      focusedSurface = SurfaceStore.get(surfaceStoreState, focusedItem.itemId);
-      func(focusedSurface);
-    }
-    onFocusedItemChanged(initialFocusedItemState);
-
-    // And then call it going forward when there are changes
-    const focusedItemUnsubscribe = FocusedItemStore.subscribe(onFocusedItemChanged);
-    const surfaceStoreUnsubscribe = SurfaceStore.subscribe(value => {
-      surfaceStoreState = value;
-      if (!focusedSurface) {
-        return;
-      }
-      focusedSurface = SurfaceStore.get(surfaceStoreState, focusedSurface.id);
-      func(focusedSurface);
-    });
-
-    return () => {
-      focusedItemUnsubscribe();
-      surfaceStoreUnsubscribe();
-    };
-  },
 };
+
+
+// Subscribe to changes in focused surface
+export const FocusedSurfaceStore = derived<
+  [typeof SurfaceStore, typeof FocusedItemStore],
+  Surface | null
+>([SurfaceStore, FocusedItemStore], ([$SurfaceStore, $FocusedItemStore], set) => {
+  if (!$FocusedItemStore) {
+    set(null);
+    return;
+  }
+  if ($FocusedItemStore.itemType !== "surface") {
+    set(null);
+    return;
+  }
+
+  set(SurfaceStore.get($SurfaceStore, $FocusedItemStore.itemId));
+  return;
+}, null);
+
+// Subscribe to changes in focused surface
+export const FocusedFoldStore = derived<
+  [typeof SurfaceStore, typeof FocusedItemStore],
+  LinearFold | null
+>([SurfaceStore, FocusedItemStore], ([$SurfaceStore, $FocusedItemStore], set) => {
+  if (!$FocusedItemStore) {
+    set(null);
+    return;
+  }
+  if ($FocusedItemStore.itemType !== "fold") {
+    set(null);
+    return;
+  }
+
+  set(SurfaceStore.getFold($SurfaceStore, $FocusedItemStore.itemId));
+  return;
+}, null);
