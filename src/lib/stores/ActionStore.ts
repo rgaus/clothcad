@@ -27,7 +27,21 @@ const ActionSurfaceSplit: ActionBaseMethods<ActionSurfaceSplit> = {
   getName() {
     return 'Split';
   },
-  isToolbarButtonEnabled() { return true },
+  // Only surfaces with folds can be split
+  isToolbarButtonEnabled(focusedItem: Item | null, surfaceStoreState: SurfaceStoreState) {
+    if (!focusedItem) {
+      return false;
+    }
+    if (focusedItem.itemType !== 'surface') {
+      return false;
+    }
+    const surface = SurfaceStore.get(surfaceStoreState, focusedItem.itemId);
+    if (!surface) {
+      return false;
+    }
+
+    return surface.folds.length > 0;
+  },
   getPanelComponent() {
     return ActionSurfaceSplitPanel;
   },
