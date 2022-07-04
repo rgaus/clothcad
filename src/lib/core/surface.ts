@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { parseSVG as parseSVGPath, makeAbsolute } from 'svg-path-parser';
 import { PlanarFace } from './planar-face';
 import { LinearFold } from './linear-fold';
@@ -9,8 +8,10 @@ import {
 } from './coordinates';
 
 import { colorGeneratorFactory } from '$lib/color';
+import { generateId } from '$lib/id';
 
 export type Surface = {
+  type: 'surface';
   id: string;
   name: string;
   face: PlanarFace;
@@ -27,7 +28,8 @@ export const Surface = {
   create(face: PlanarFace, folds: Array<LinearFold> = []): Surface {
     const colorFamily = generateColorFamily();
     return {
-      id: uuidv4(),
+      type: 'surface',
+      id: generateId('sur'),
       name: 'Untitled Surface',
       face,
       folds,

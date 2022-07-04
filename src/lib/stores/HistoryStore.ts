@@ -1,8 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
 import { writable, get } from 'svelte/store';
 
 import type { Item } from '$lib/types/item';
 import type { FixMe } from '$lib/types/fixme';
+import { generateId } from '$lib/id';
 
 import { SurfaceStore } from './SurfaceStore';
 import type { SurfaceStoreState } from './SurfaceStore';
@@ -72,7 +72,7 @@ export const HistoryStore = {
       HistoryStore.update(value => {
         const historyItem: HistoryListItem<A, Partial<C>> = {
           ...historyItemParams,
-          id: uuidv4(),
+          id: generateId('his'),
           args,
           context: historyItemParams.context || {},
           updatedAt: new Date().toISOString(),

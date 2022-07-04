@@ -1,8 +1,9 @@
-import { v4 as uuidv4 } from 'uuid';
 import { Vector3 } from 'three';
 import { PlanarCoordinates, SpacialCoordinates } from './coordinates';
 import { radiansToDegrees, degreesToRadians } from './utils';
 import type { Surface } from './surface';
+
+import { generateId } from '$lib/id';
 
 export type LinearFold = {
   type: 'linear-fold';
@@ -15,7 +16,7 @@ export type LinearFold = {
 };
 export const LinearFold = {
   create(a: PlanarCoordinates, b: PlanarCoordinates): LinearFold {
-    return { type: 'linear-fold', id: uuidv4(), a, b, surfaceAId: null, surfaceBId: null };
+    return { type: 'linear-fold', id: generateId('fld'), a, b, surfaceAId: null, surfaceBId: null };
   },
 
   isPointOnLeft(fold: LinearFold, c: PlanarCoordinates) {
