@@ -6,13 +6,13 @@
 <style>
   @import "../../styles/variables.css";
 
-  .hstack {
+  .stack {
     display: flex;
   }
 </style>
 
 <div
-  class="hstack"
+  class="stack"
   style:gap={`var(--space-${gap})`}
   style:flex-direction={direction === 'horizontal' ? 'row' : 'column'}
 >

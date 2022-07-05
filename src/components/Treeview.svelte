@@ -1,8 +1,10 @@
 <script lang="ts">
   import { COLORS } from '$lib/color';
 
-  import { SurfaceStore, HistoryStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
+  import { SurfaceStore, DrawingStore, HistoryStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
   import type { HistoryListItem } from '$lib/stores/HistoryStore';
+
+  import { Drawing } from '$lib/core';
 
   import Panel from './ui/Panel.svelte';
   import TextField from './ui/TextField.svelte';
@@ -10,7 +12,7 @@
 
   type TabItem = 'drawing' | 'surface' | 'fold' | 'history';
 
-  let activeTab: TabItem = 'surface';
+  let activeTab: TabItem = 'drawing';
 
   let focusedHistoryItemId: HistoryListItem['id'] | null = null;
   let focusedHistoryItemName = '';
@@ -47,6 +49,7 @@
     overflow: hidden;
     height: var(--space-8);
     width: calc(var(--treeview-default-width) - var(--space-6));
+    user-select: none;
   }
 
   .tab {
@@ -177,12 +180,14 @@
     flex-grow: 1;
     flex-shrink: 1;
   }
+  .label:first-child { padding-left: var(--space-1); }
+  .label:last-child { padding-right: var(--space-1); }
 </style>
 
 <Panel
   width={activeTab === 'history' ? "600px" : "var(--treeview-default-width)"}
   height="100%"
-  hidden={$PickingItemStore.enabled || $ActionStore.enabled}
+  hidden={$PickingItemStore.enabled || $ActionStore.enabled || $DrawingStore?.editing?.enabled}
 >
   <div class="wrapper">
     <div class="tabrow">
@@ -210,6 +215,39 @@
         }}
       >History</button>
     </div>
+    {#if activeTab === "drawing"}
+      <Button on:click={() => DrawingStore.addItem(Drawing.createSample())} text="Create Sample" />
+      <ul class="list">
+        {#each $DrawingStore.items as drawing (drawing.id)}
+          <li
+            class="item"
+            class:highlighted={HighlightedItemStore.isHighlighted(
+              $HighlightedItemStore,
+              "drawing",
+              drawing.id,
+            )}
+            class:focused={FocusedItemStore.isFocused(
+              $FocusedItemStore,
+              "drawing",
+              drawing.id,
+            )}
+            on:mouseenter={() => HighlightedItemStore.enterItem("drawing", drawing.id)}
+            on:mouseleave={() => HighlightedItemStore.leaveItem()}
+            on:click={() => FocusedItemStore.focusItem("drawing", drawing.id)}
+          >
+            <div class="label">
+              {drawing.name}
+            </div>
+            <Button
+              text="Edit"
+              on:click={() => DrawingStore.set(
+                DrawingStore.beginEditing($DrawingStore, drawing.id)
+              )}
+            />
+          </li>
+        {/each}
+      </ul>
+    {/if}
     {#if activeTab === "surface"}
       <ul class="list">
         {#each $SurfaceStore.items as surface (surface.id)}

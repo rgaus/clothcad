@@ -1,6 +1,12 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
   import Stack from './Stack.svelte';
+  import Button from './Button.svelte';
+
+  const dispatch = createEventDispatcher();
+
   export let fixed: boolean = false;
+  export let back: boolean = false;
 </script>
 
 <style>
@@ -29,6 +35,8 @@
   }
 
   .title {
+    display: flex;
+    gap: var(--space-2);
     font-size: var(--font-size-large);
     font-weight: var(--font-weight-bold);
   }
@@ -36,6 +44,12 @@
 
 <div class="appbar" class:fixed={fixed}>
   <div class="title">
+    {#if back}
+      <Button
+        on:click={() => dispatch('back')}
+        text="&larr;"
+      />
+    {/if}
     <slot name="title" />
   </div>
   <div class="actions">

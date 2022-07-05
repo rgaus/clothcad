@@ -9,6 +9,7 @@ import { SurfaceStore, FocusedSurfaceStore, FocusedFoldStore } from './SurfaceSt
 import type { SurfaceStoreState } from './SurfaceStore';
 import { FocusedItemStore } from './FocusedItemStore';
 import { HistoryStore } from './HistoryStore';
+import { DrawingStore, FocusedDrawingStore, EditingDrawingStore } from './DrawingStore';
 
 const HighlightedItemStore = {
   ...writable<Item | null>(null),
@@ -135,6 +136,9 @@ export {
   SurfaceStore,
   FocusedSurfaceStore,
   FocusedFoldStore,
+  DrawingStore,
+  FocusedDrawingStore,
+  EditingDrawingStore,
   HighlightedItemStore,
   FocusedItemStore,
   PickingItemStore,

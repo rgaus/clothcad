@@ -19,8 +19,8 @@ export const SVGCoordinates = {
     const height = Math.max(...face.points.map(p => p.y)) - origin.y;
 
     return PlanarCoordinates.create(
-      svgCoords.x * scale,
-      ((height / scale) - svgCoords.y) * scale,
+      (svgCoords.x * scale) - origin.x,
+      (((height / scale) - svgCoords.y) * scale) + origin.y,
     );
   },
 };

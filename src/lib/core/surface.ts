@@ -50,7 +50,7 @@ export const Surface = {
       throw new Error('No parent element above selected rect!');
     }
 
-    const scale = 0.5;
+    const scale = 1;
 
     let minX = parseFloat(rect.getAttribute('x') || '');
     let minY = parseFloat(rect.getAttribute('y') || '');
@@ -71,11 +71,11 @@ export const Surface = {
       for (const pathCommand of pathCommands) {
         switch (pathCommand.command) {
           case 'moveto': {
-            position = SVGCoordinates.create(pathCommand.x - minX, pathCommand.y - minY);
+            position = SVGCoordinates.create(pathCommand.x, pathCommand.y);
             break;
           }
           case 'lineto': {
-            const newPosition = SVGCoordinates.create(pathCommand.x - minX, pathCommand.y - minY);
+            const newPosition = SVGCoordinates.create(pathCommand.x, pathCommand.y);
             const fold = LinearFold.create(
               SVGCoordinates.toPlanarCoordinates(position, face, scale),
               SVGCoordinates.toPlanarCoordinates(newPosition, face, scale),

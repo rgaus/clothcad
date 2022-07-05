@@ -25,6 +25,8 @@
   --space-8: 32px;
   --space-9: 36px;
   --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
 
   /* COLORS */
   --white: #ffffff;
@@ -87,5 +89,6 @@ body {
 
 ::selection {
   color: var(--gray-2);
+  fill: var(--gray-2);
   background-color: var(--cyan-7);
 }

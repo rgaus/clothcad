@@ -12,8 +12,9 @@
   import FocusedSurfacePanel from '../components/FocusedSurfacePanel.svelte';
   import FocusedFoldPanel from '../components/FocusedFoldPanel.svelte';
   import Viewport from '../components/Viewport.svelte';
+  import DrawingEditViewport from '../components/DrawingEditViewport.svelte';
 
-  import { HistoryStore, SurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { HistoryStore, DrawingStore, SurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
 
   let surface: Surface;
 
@@ -109,6 +110,29 @@
       {/if}
 
       <svelte:component this={$ActionStore.ActionType.getPanelComponent()} />
+    {/if}
+
+    {#if $DrawingStore?.editing?.enabled}
+      <AppBar fixed>
+        <span slot="title">Editing Drawing</span>
+        <svelte:fragment slot="actions">
+          <Button
+            on:click={() => DrawingStore.set(DrawingStore.cancelEditing($DrawingStore))}
+            text="Cancel"
+          />
+          <Button
+            on:click={() => {
+              const [drawingStoreState, surfaceStoreState] = DrawingStore.completeEditing($DrawingStore, $SurfaceStore);
+              DrawingStore.set(drawingStoreState);
+              SurfaceStore.set(surfaceStoreState);
+            }}
+            variant="primary"
+            text="Save"
+          />
+        </svelte:fragment>
+      </AppBar>
+
+      <DrawingEditViewport />
     {/if}
   </svelte:fragment>
 </Layout>
