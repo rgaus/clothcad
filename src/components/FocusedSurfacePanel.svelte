@@ -59,7 +59,7 @@
                     colorFamily,
                   };
                 });
-                return { SurfaceStore: newValue };
+                return { ...value, SurfaceStore: newValue };
               },
               backwards: (value, [surfaceId]) => {
                 const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
@@ -68,7 +68,7 @@
                     colorFamily: originalColorFamily,
                   };
                 });
-                return { SurfaceStore: newValue };
+                return { ...value, SurfaceStore: newValue };
               },
             })(focusedSurface.id);
           }}
@@ -101,7 +101,7 @@
                     name,
                   };
                 });
-                return { SurfaceStore: newValue };
+                return { ...value, SurfaceStore: newValue };
               },
               backwards: (value, [surfaceId]) => {
                 const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
@@ -110,7 +110,7 @@
                     name: originalName,
                   };
                 });
-                return { SurfaceStore: newValue };
+                return { ...value, SurfaceStore: newValue };
               },
             })(focusedSurface.id);
           }}

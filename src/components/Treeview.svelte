@@ -22,6 +22,32 @@
       activeTab = focusedItem.itemType;
     }
   });
+
+  function createSample() {
+    const mutation = HistoryStore.createMutation<[], {drawingId: Drawing['id']}>({
+      name: "Create drawing",
+      forwards: (storeValues, _args, context) => {
+        let drawingStoreValue = storeValues.DrawingStore;
+        const drawing = Drawing.createSample();
+        if (context.drawingId) {
+          drawing.id = context.drawingId;
+        } else {
+          context.drawingId = drawing.id;
+        }
+        drawingStoreValue = DrawingStore.addItem(drawingStoreValue, drawing);
+        return { ...storeValues, DrawingStore: drawingStoreValue };
+      },
+      backwards: (storeValues, _args, context) => {
+        let drawingStoreValue = storeValues.DrawingStore;
+        if (!context.drawingId) {
+          throw new Error(`Error creating drawing: context.drawingId was not set, this should not happen!`);
+        }
+        drawingStoreValue = DrawingStore.removeItem(drawingStoreValue, context.drawingId);
+        return { ...storeValues, DrawingStore: drawingStoreValue };
+      },
+    });
+    mutation();
+  }
 </script>
 
 <style>
@@ -216,7 +242,10 @@
       >History</button>
     </div>
     {#if activeTab === "drawing"}
-      <Button on:click={() => DrawingStore.addItem(Drawing.createSample())} text="Create Sample" />
+      <Button
+        on:click={() => createSample()}
+        text="Create Sample"
+      />
       <ul class="list">
         {#each $DrawingStore.items as drawing (drawing.id)}
           <li
@@ -280,13 +309,13 @@
                 HistoryStore.createMutation({
                   name: `${surface.visible ? 'Hide' : 'Show'} ${surface.name}`,
                   forwards: (value, [surfaceId]) => {
-                    const newValue =SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
+                    const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                       return {
                         ...surface,
                         visible: !initialSurfaceVisibility,
                       };
                     });
-                    return { SurfaceStore: newValue };
+                    return { ...value, SurfaceStore: newValue };
                   },
                   backwards: (value, [surfaceId]) => {
                     const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
@@ -295,7 +324,7 @@
                         visible: initialSurfaceVisibility,
                       };
                     });
-                    return { SurfaceStore: newValue };
+                    return { ...value, SurfaceStore: newValue };
                   },
                 })(surface.id);
               }}

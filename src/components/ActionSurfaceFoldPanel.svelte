@@ -46,7 +46,7 @@
           console.log('ROTATED', surfaceToRotate);
 
           value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
-          return { SurfaceStore: value };
+          return { ...storeValues, SurfaceStore: value };
         },
         backwards: (storeValues, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
           let value = storeValues.SurfaceStore;
@@ -73,7 +73,7 @@
           );
 
           value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
-          return { SurfaceStore: value };
+          return { ...storeValues, SurfaceStore: value };
         },
         requireFreshlyCreated: (args) => [
           { itemType: 'surface', itemId: args[2] },

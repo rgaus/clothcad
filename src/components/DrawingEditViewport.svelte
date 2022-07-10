@@ -1,6 +1,11 @@
 <script lang="ts">
-  import { DrawingStore, EditingDrawingStore } from '$lib/stores';
-  import { Drawing, DrawingGeometry, DrawingSurface, DrawingSurfaceFoldSet } from '$lib/core';
+  import { DrawingStore, EditingDrawingStore, HistoryStore } from '$lib/stores';
+  import {
+    Drawing,
+    DrawingGeometry,
+    DrawingSurface,
+    DrawingSurfaceFoldSet,
+  } from '$lib/core';
   import type { Numeral } from '$lib/numeral';
 
   import AppBar from './ui/AppBar.svelte';
@@ -11,7 +16,6 @@
   // When the edited drawing updates, update the scale
   let focusedDrawingScale: Numeral | null = null;
   EditingDrawingStore.subscribe(editingDrawing => {
-    console.log('HERE');
     focusedDrawingScale = editingDrawing?.media.scale || null;
   });
 
@@ -79,6 +83,265 @@
     const lines = input.split(/\n/);
     const whitespaceCount = lines[lines.length-1].length - lines[lines.length-1].trimStart().length;
     return lines.map(l => l.startsWith(' ') ? l.slice(whitespaceCount) : l).join('\n');
+  }
+
+  function addFoldSet() {
+    if (!$EditingDrawingStore) {
+      return;
+    }
+
+    if (!focusedDrawingSurface) {
+      throw new Error(`Drawing surface ${focusedDrawingSurfaceId} cannot be found!`);
+    }
+
+    HistoryStore.createMutation<[Drawing['id'], DrawingSurface['id']], { foldSetId: DrawingSurfaceFoldSet['id'] }>({
+      name: `Create fold set`,
+
+      forwards: (storeValues, [drawingId, drawingSurfaceId], context) => {
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          return Drawing.updateSurface(drawing, drawingSurfaceId, drawingSurface => {
+            const foldSet = DrawingSurfaceFoldSet.create({
+              geometrySelector: '',
+              folds: [],
+            });
+
+            // Cache fold id so that if this step is run again in the future, the foldset
+            // will receive the same id
+            if (context.foldSetId) {
+              foldSet.id = context.foldSetId;
+            } else {
+              context.foldSetId = foldSet.id;
+            }
+
+            return {
+              ...drawingSurface,
+              foldSets: [ ...drawingSurface.foldSets, foldSet ],
+            };
+          })
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+
+      backwards: (storeValues, [drawingId, drawingSurfaceId], context) => {
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          return Drawing.updateSurface(drawing, drawingSurfaceId, drawingSurface => {
+            if (!context.foldSetId) {
+              throw new Error('context.foldSetId was not set, this should not be possible!');
+            }
+
+            return {
+              ...drawingSurface,
+              foldSets: drawingSurface.foldSets.filter(fs => fs.id !== context.foldSetId),
+            };
+          })
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+    })($EditingDrawingStore.id, focusedDrawingSurface.id);
+  }
+
+  function newSubregion() {
+    if (!$EditingDrawingStore) {
+      return;
+    }
+
+    const mutation = HistoryStore.createMutation<[Drawing['id']], { drawingSurfaceId: DrawingSurface['id'] }>({
+      name: `Create drawing surface`,
+      forwards: (storeValues, [drawingId], context) => {
+        const drawingSurface = DrawingSurface.create({
+          surfaceId: null,
+          geometrySelector: '',
+          geometry: null,
+          foldSets: [],
+        });
+
+        if (context.drawingSurfaceId) {
+          drawingSurface.id = context.drawingSurfaceId;
+        } else {
+          context.drawingSurfaceId = drawingSurface.id;
+        }
+
+        console.log('UP', storeValues.DrawingStore, drawingId);
+        const newValue = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawingValue => {
+          const result = Drawing.addSurface(drawingValue, drawingSurface);
+          console.log('CREATE', drawingSurface, result);
+          return result;
+        });
+
+        focusedDrawingSurfaceId = drawingSurface.id;
+
+        return { ...storeValues, DrawingStore: newValue };
+      },
+      backwards: (storeValues, [drawingId], context) => {
+        const newValue = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawingValue => {
+          if (!context.drawingSurfaceId) {
+            throw new Error(`Drawing surface id was not set!`);
+          }
+          return Drawing.removeSurface(drawingValue, context.drawingSurfaceId);
+        });
+
+        focusedDrawingSurfaceId = null;
+
+        return { ...storeValues, DrawingStore: newValue };
+      },
+    });
+    mutation($EditingDrawingStore.id);
+  }
+
+  function updateFoldSetGeometry(drawingSurfaceFoldSetId: DrawingSurfaceFoldSet['id']) {
+    if (!$EditingDrawingStore) {
+      return;
+    }
+    if (!focusedDrawingSurface) {
+      return;
+    }
+
+    const newSelector = foldSetSelectors[drawingSurfaceFoldSetId];
+
+    HistoryStore.createMutation<
+      [Drawing['id'], DrawingSurface['id'], DrawingSurfaceFoldSet['id']],
+      { oldGeometrySelector: DrawingSurfaceFoldSet['geometrySelector'] }
+    >({
+      name: `Update fold set geometry`,
+      forwards: (storeValues, [drawingId, drawingSurfaceId, drawingSurfaceFoldSetId], context) => {
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          return Drawing.updateFoldSet(
+            drawing,
+            drawingSurfaceId,
+            drawingSurfaceFoldSetId,
+            drawingSurfaceFoldSet => {
+              context.oldGeometrySelector = drawingSurfaceFoldSet.geometrySelector;
+
+              return {
+                ...drawingSurfaceFoldSet,
+                geometrySelector: newSelector,
+                folds: findInSVGAll(newSelector).map(element => {
+                  const geometry = DrawingGeometry.create(element);
+                  if (!geometry) {
+                    throw new Error(`Unable to parse this svg element into a fold: ${element.outerHTML}`);
+                  }
+                  if (geometry.type === 'rect') {
+                    throw new Error('Unable to use a rect geometry as a fold!');
+                  }
+                  return { geometry, foldId: null };
+                }),
+              };
+            },
+          );
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+      backwards: (storeValues, [drawingId, drawingSurfaceId, drawingSurfaceFoldSetId], context) => {
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          return Drawing.updateFoldSet(
+            drawing,
+            drawingSurfaceId,
+            drawingSurfaceFoldSetId,
+            drawingSurfaceFoldSet => {
+              if (typeof context.oldGeometrySelector === 'undefined') {
+                throw new Error(`context.oldGeometrySelector was not set!`);
+              }
+
+              return {
+                ...drawingSurfaceFoldSet,
+                geometrySelector: context.oldGeometrySelector,
+                folds: findInSVGAll(context.oldGeometrySelector).map(element => {
+                  const geometry = DrawingGeometry.create(element);
+                  if (!geometry) {
+                    throw new Error(`Unable to parse this svg element into a fold: ${element.outerHTML}`);
+                  }
+                  if (geometry.type === 'rect') {
+                    throw new Error('Unable to use a rect geometry as a fold!');
+                  }
+                  return { geometry, foldId: null };
+                }),
+              };
+            },
+          );
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+    })($EditingDrawingStore.id, focusedDrawingSurface.id, drawingSurfaceFoldSetId);
+  }
+
+  function updateFocusedDrawingSurfaceSelector() {
+    if (!$EditingDrawingStore) {
+      return;
+    }
+
+    if (!focusedDrawingSurface) {
+      throw new Error(`Drawing surface ${focusedDrawingSurfaceId} cannot be found!`);
+    }
+
+    // Cache the old drawing surface value for if backwards needs to be run
+    const existingDrawingSurface = focusedDrawingSurface;
+
+    HistoryStore.createMutation<[Drawing['id'], DrawingSurface['id'], string]>({
+      name: `Set drawing surface geometry to ${focusedDrawingSurfaceSelector}`,
+      forwards: (storeValues, [drawingId, drawingSurfaceId, selector]) => {
+        // Update drawing to use new main geometry selector
+        const newDrawingStoreValue = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          let result: Element | null;
+          try {
+            result = drawing.media.document.querySelector(selector);
+          } catch (err) {
+            result = null;
+          }
+
+          const updatedSurface = Drawing.updateSurface(drawing, drawingSurfaceId, drawingSurface => {
+            if (!result) {
+              // If the query didn't result in anything, reset
+              return {
+                ...drawingSurface,
+                geometrySelector: selector,
+                geometry: null,
+              };
+            }
+
+            const geometry = DrawingGeometry.create(result);
+            if (!geometry) {
+              return {
+                ...drawingSurface,
+                geometrySelector: selector,
+                geometry: null,
+              };
+            }
+
+            // Only path / rect geometries can be used as outside surface perimeters
+            if (geometry.type !== 'path' && geometry.type !== 'rect') {
+              return {
+                ...drawingSurface,
+                geometrySelector: selector,
+                geometry: null,
+              };
+            }
+
+            return {
+              ...drawingSurface,
+              geometrySelector: selector,
+              geometry,
+            };
+          });
+          console.log('F UPDATED DRAWING SURFACE', updatedSurface);
+          return updatedSurface;
+        });
+        return { ...storeValues, DrawingStore: newDrawingStoreValue };
+      },
+      backwards: (storeValues, [drawingId, drawingSurfaceId, _selector]) => {
+        // Reset back to original values
+        const newDrawingStoreValue = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          console.log('B UPDATED DRAWING SURFACE', existingDrawingSurface.geometrySelector, existingDrawingSurface.geometry);
+          return Drawing.updateSurface(drawing, drawingSurfaceId, drawingSurface => {
+            return {
+              ...drawingSurface,
+              geometrySelector: existingDrawingSurface.geometrySelector,
+              geometry: existingDrawingSurface.geometry,
+            };
+          })
+        });
+        return { ...storeValues, DrawingStore: newDrawingStoreValue };
+      },
+    })($EditingDrawingStore.id, focusedDrawingSurface.id, focusedDrawingSurfaceSelector);
   }
 </script>
 
@@ -190,42 +453,7 @@
         Find surface main geometry:
         <TextField
           bind:value={focusedDrawingSurfaceSelector}
-          on:blur={() => {
-            if (!$EditingDrawingStore) {
-              return;
-            }
-
-            DrawingStore.updateItem($EditingDrawingStore.id, drawing => {
-              if (!focusedDrawingSurface) {
-                return drawing;
-              }
-              return Drawing.updateSurface(drawing, focusedDrawingSurface.id, drawingSurface => {
-                if (!focusedDrawingSurfaceSelectorResult) {
-                  // If the query didn' result in anything, reset
-                  return {
-                    ...drawingSurface,
-                    geometrySelector: focusedDrawingSurfaceSelector,
-                    geometry: null,
-                  };
-                }
-
-                const geometry = DrawingGeometry.create(focusedDrawingSurfaceSelectorResult);
-                if (!geometry) {
-                  return drawingSurface;
-                }
-                // Only path / rect geometries can be used as outside surface perimeters
-                if (geometry.type !== 'path' && geometry.type !== 'rect') {
-                  return drawingSurface;
-                }
-
-                return {
-                  ...drawingSurface,
-                  geometrySelector: focusedDrawingSurfaceSelector,
-                  geometry,
-                };
-              })
-            });
-          }}
+          on:blur={() => updateFocusedDrawingSurfaceSelector()}
           invalid={focusedDrawingSurfaceSelectorResult === null}
           placeholder="eg: #myid"
         />
@@ -241,30 +469,7 @@
         <br />
         <br />
         Display Surface Fold Sets:
-        <Button
-          text="Add fold set"
-          on:click={() => {
-            if (!$EditingDrawingStore) {
-              return;
-            }
-
-            DrawingStore.updateItem($EditingDrawingStore.id, drawing => {
-              if (!focusedDrawingSurface) {
-                return drawing;
-              }
-              return Drawing.updateSurface(drawing, focusedDrawingSurface.id, drawingSurface => ({
-                ...drawingSurface,
-                foldSets: [
-                  ...drawingSurface.foldSets,
-                  DrawingSurfaceFoldSet.create({
-                    geometrySelector: '',
-                    folds: [],
-                  }),
-                ],
-              }))
-            });
-          }}
-        />
+        <Button text="Add fold set" on:click={() => addFoldSet()} />
         <ul>
           {#each focusedDrawingSurface.foldSets as drawingSurfaceFoldSet (drawingSurfaceFoldSet.id)}
             <li>
@@ -272,36 +477,7 @@
 
               <TextField
                 bind:value={foldSetSelectors[drawingSurfaceFoldSet.id]}
-                on:blur={() => {
-                  if (!$EditingDrawingStore) {
-                    return;
-                  }
-
-                  DrawingStore.updateItem($EditingDrawingStore.id, drawing => {
-                    if (!focusedDrawingSurface) {
-                      return drawing;
-                    }
-                    return Drawing.updateFoldSet(
-                      drawing,
-                      focusedDrawingSurface.id,
-                      drawingSurfaceFoldSet.id,
-                      drawingSurfaceFoldSet => ({
-                        ...drawingSurfaceFoldSet,
-                        geometrySelector: foldSetSelectors[drawingSurfaceFoldSet.id],
-                        folds: findInSVGAll(foldSetSelectors[drawingSurfaceFoldSet.id]).map(element => {
-                          const geometry = DrawingGeometry.create(element);
-                          if (!geometry) {
-                            throw new Error(`Unable to parse this svg element into a fold: ${element.outerHTML}`);
-                          }
-                          if (geometry.type === 'rect') {
-                            throw new Error('Unable to use a rect geometry as a fold!');
-                          }
-                          return { geometry, foldId: null };
-                        }),
-                      }),
-                    );
-                  });
-                }}
+                on:blur={() => updateFoldSetGeometry(drawingSurfaceFoldSet.id)}
                 invalid={focusedDrawingSurfaceSelectorResult === null}
                 placeholder="eg: #myid"
               />
@@ -330,25 +506,7 @@
         <span slot="title">Drawing Subregions</span>
         <svelte:fragment slot="actions">
           <Button
-            on:click={() => {
-              if (!$EditingDrawingStore) {
-                return;
-              }
-
-              DrawingStore.updateItem($EditingDrawingStore.id, drawingValue => {
-                const drawingSurface = DrawingSurface.create({
-                  surfaceId: null,
-                  geometrySelector: '',
-                  geometry: null,
-                  foldSets: [],
-                });
-
-                drawingValue = Drawing.addSurface(drawingValue, drawingSurface);
-
-                focusedDrawingSurfaceId = drawingSurface.id;
-                return drawingValue;
-              });
-            }}
+            on:click={() => newSubregion()}
             text="New"
           />
         </svelte:fragment>
@@ -380,18 +538,21 @@
             return;
           }
 
-          DrawingStore.updateItem($EditingDrawingStore.id, drawing => {
-            if (!e.detail) {
-              return drawing;
-            }
-            const newDrawing = {
-              ...drawing,
-              media: {
-                ...drawing.media,
-                scale: e.detail,
-              },
-            };
-            return newDrawing;
+          const drawingId = $EditingDrawingStore.id;
+          DrawingStore.update(value => {
+            return DrawingStore.updateItem(value, drawingId, drawing => {
+              if (!e.detail) {
+                return drawing;
+              }
+              const newDrawing = {
+                ...drawing,
+                media: {
+                  ...drawing.media,
+                  scale: e.detail,
+                },
+              };
+              return newDrawing;
+            });
           });
         }}
       />

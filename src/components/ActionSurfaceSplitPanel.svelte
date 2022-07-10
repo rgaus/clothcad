@@ -84,7 +84,7 @@
             surfaceBId: surfaceB.id,
           }));
 
-          return { SurfaceStore: value };
+          return { ...storeValues, SurfaceStore: value };
         },
         backwards: (storeValues, [parentSurfaceId, foldId], context) => {
           let value = storeValues.SurfaceStore;
@@ -120,7 +120,7 @@
             surfaceBId: null,
           }));
 
-          return { SurfaceStore: value };
+          return { ...storeValues, SurfaceStore: value };
         },
       })(focusedSurface.id, focusedFoldId);
     });

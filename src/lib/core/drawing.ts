@@ -184,6 +184,12 @@ export const Drawing = {
       surfaces: drawing.surfaces.map(n => n.id === drawingSurfaceId ? updater(n) : n),
     };
   },
+  getSurface(drawing: Drawing, drawingSurfaceId: DrawingSurface['id']): DrawingSurface | null {
+    return drawing.surfaces.find(n => n.id === drawingSurfaceId) || null;
+  },
+  removeSurface(drawing: Drawing, drawingSurfaceId: DrawingSurface['id']): Drawing {
+    return { ...drawing, surfaces: drawing.surfaces.filter(i => i.id !== drawingSurfaceId) };
+  },
   updateFoldSet(
     drawing: Drawing,
     drawingSurfaceId: DrawingSurface['id'],

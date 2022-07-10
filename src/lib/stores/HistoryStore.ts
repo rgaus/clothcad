@@ -6,13 +6,17 @@ import { generateId } from '$lib/id';
 
 import { SurfaceStore } from './SurfaceStore';
 import type { SurfaceStoreState } from './SurfaceStore';
+import { DrawingStore } from './DrawingStore';
+import type { DrawingStoreState } from './DrawingStore';
 
 // StoreValues ensapsulates the current state of all stores that are tracked by the HistoryStore.
 export type StoreValues = {
   SurfaceStore: SurfaceStoreState;
+  DrawingStore: DrawingStoreState;
 };
 const getInitialStoreValues: () => StoreValues = () => ({
   SurfaceStore: get(SurfaceStore),
+  DrawingStore: get(DrawingStore),
 });
 const updateStoreValues = (initialStoreValues: StoreValues, storeValues: StoreValues) => {
   for (const [storeName, storeValue] of Object.entries(storeValues)) {
@@ -20,7 +24,13 @@ const updateStoreValues = (initialStoreValues: StoreValues, storeValues: StoreVa
       case 'SurfaceStore':
         // Only update the store if the reference changed
         if (storeValue !== initialStoreValues.SurfaceStore) {
-          SurfaceStore.set(storeValue);
+          SurfaceStore.set(storeValue as SurfaceStoreState);
+        }
+        break;
+      case 'DrawingStore':
+        // Only update the store if the reference changed
+        if (storeValue !== initialStoreValues.DrawingStore) {
+          DrawingStore.set(storeValue as DrawingStoreState);
         }
         break;
       default:

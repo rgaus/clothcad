@@ -50,11 +50,11 @@
       HistoryStore.createMutation({
         name: 'Create initial surface',
         forwards: value => {
-          return { SurfaceStore: SurfaceStore.addItem(value.SurfaceStore, surface) };
+          return { ...value, SurfaceStore: SurfaceStore.addItem(value.SurfaceStore, surface) };
         },
         backwards: value => {
           if (surface) {
-            value = {SurfaceStore: SurfaceStore.removeItem(value.SurfaceStore, surface.id)};
+            value = { ...value, SurfaceStore: SurfaceStore.removeItem(value.SurfaceStore, surface.id)};
           }
           /* surfaceA && SurfaceStore.removeItem(surfaceA); */
           /* surfaceB && SurfaceStore.removeItem(surfaceB); */
