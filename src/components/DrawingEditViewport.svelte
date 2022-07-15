@@ -482,7 +482,14 @@
                 placeholder="eg: #myid"
               />
               {#if focusedDrawingSurfaceSelectorResult}
-                {#each foldSetSelectorResults[drawingSurfaceFoldSet.id] as foldSetResult}
+                {#each foldSetSelectorResults[drawingSurfaceFoldSet.id] as foldSetResult, index}
+                  {@const foo = drawingSurfaceFoldSet.folds[index]}
+                  {foo && foo.geometry && DrawingSurfaceFoldSet.getMoreSpecificSelectorForFold(
+                    drawingSurfaceFoldSet,
+                    $EditingDrawingStore.media,
+                    foo.geometry,
+                  )}
+
                   <pre class="well">{removeLeadingWhitespace(foldSetResult.outerHTML)}</pre>
                 {/each}
               {:else}

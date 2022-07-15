@@ -103,6 +103,36 @@ export const DrawingSurfaceFoldSet = {
   create(fields: Omit<DrawingSurfaceFoldSet, 'id'>): DrawingSurfaceFoldSet {
     return { id: generateId(), ...fields };
   },
+
+  getMoreSpecificSelectorForFold(
+    drawingSurfaceFoldSet: DrawingSurfaceFoldSet,
+    drawingMedia: Drawing['media'],
+    geometry: DrawingGeometry,
+  ): string {
+    const testSelector = (selector: string) => {
+      return drawingMedia.document.querySelectorAll(selector).length === 1;
+    };
+
+    let selector = drawingSurfaceFoldSet.geometrySelector;
+
+    // Try to add an id to the selector if one exists
+    const element = geometry.element;
+
+    const id = element.getAttribute('id');
+    if (id) {
+      selector = `${selector}#${id}`;
+    }
+    if (testSelector(selector)) {
+      return selector;
+    }
+
+    // If the id alone isn't unique enough, add a `:nth-of-type`
+    const n = Array.from(
+      drawingMedia.document.querySelectorAll(selector)
+    ).findIndex(element => element === geometry.element);
+
+    return `${selector}:nth-of-type(${n})`;
+  },
 };
 
 
