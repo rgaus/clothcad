@@ -117,15 +117,11 @@
         <span slot="title">Editing Drawing</span>
         <svelte:fragment slot="actions">
           <Button
-            on:click={() => DrawingStore.set(DrawingStore.cancelEditing($DrawingStore))}
+            on:click={() => DrawingStore.cancelEditing()}
             text="Cancel"
           />
           <Button
-            on:click={() => {
-              const [drawingStoreState, surfaceStoreState] = DrawingStore.completeEditing($DrawingStore, $SurfaceStore);
-              DrawingStore.set(drawingStoreState);
-              SurfaceStore.set(surfaceStoreState);
-            }}
+            on:click={() => DrawingStore.completeEditing($DrawingStore)}
             variant="primary"
             text="Save"
           />
