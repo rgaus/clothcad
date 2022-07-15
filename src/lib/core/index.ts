@@ -14,6 +14,7 @@ export {
   DrawingGeometryLine,
   DrawingSurface,
   DrawingSurfaceFoldSet,
+  DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
 } from './drawing';
 export { 
   radiansToDegrees,

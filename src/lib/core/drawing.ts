@@ -1,19 +1,22 @@
 import { parseSVG as parseSVGPath, makeAbsolute } from 'svg-path-parser';
+import { Vector2, Matrix3 } from 'three';
 
 import { generateId } from '$lib/id';
 import { SVGCoordinates } from '$lib/core';
 import type { Numeral } from '$lib/numeral';
 import { LiteralNumeral } from '$lib/numeral';
 
+export const DEFAULT_DRAWING_GEOMETRY_TRANSFORM = new Matrix3().identity();
+
 export type DrawingGeometry = DrawingGeometryPath | DrawingGeometryLine | DrawingGeometryRect;
 export const DrawingGeometry = {
-  create(element: Element): DrawingGeometry | null {
+  create(element: Element, transform: Matrix3 = DEFAULT_DRAWING_GEOMETRY_TRANSFORM): DrawingGeometry | null {
     if (element instanceof SVGPathElement) {
-      return DrawingGeometryPath.create(element);
+      return DrawingGeometryPath.create(element, transform);
     } else if (element instanceof SVGLineElement) {
-      return DrawingGeometryLine.create(element);
+      return DrawingGeometryLine.create(element, transform);
     } else if (element instanceof SVGRectElement) {
-      return DrawingGeometryRect.create(element);
+      return DrawingGeometryRect.create(element, transform);
     } else {
       return null;
     }
@@ -27,7 +30,7 @@ export type DrawingGeometryPath = {
   segments: Array<[SVGCoordinates, SVGCoordinates]>,
 };
 export const DrawingGeometryPath = {
-  create(element: SVGPathElement): DrawingGeometryPath {
+  create(element: SVGPathElement, transform: Matrix3 = DEFAULT_DRAWING_GEOMETRY_TRANSFORM): DrawingGeometryPath {
     const pathCommands = parseSVGPath(element.getAttribute('d') || '');
     makeAbsolute(pathCommands);
 
@@ -37,11 +40,13 @@ export const DrawingGeometryPath = {
     for (const pathCommand of pathCommands) {
       switch (pathCommand.command) {
         case 'moveto': {
-          position = SVGCoordinates.create(pathCommand.x, pathCommand.y);
+          const pathCommandTransformed = (new Vector2(pathCommand.x, pathCommand.y)).applyMatrix3(transform);
+          position = SVGCoordinates.create(pathCommandTransformed.x, pathCommandTransformed.y);
           break;
         }
         case 'lineto': {
-          const newPosition = SVGCoordinates.create(pathCommand.x, pathCommand.y);
+          const pathCommandTransformed = (new Vector2(pathCommand.x, pathCommand.y)).applyMatrix3(transform);
+          const newPosition = SVGCoordinates.create(pathCommandTransformed.x, pathCommandTransformed.y);
           segments.push([position, newPosition]);
           position = newPosition;
           break;
@@ -61,13 +66,21 @@ export type DrawingGeometryRect = {
   height: number,
 };
 export const DrawingGeometryRect = {
-  create(element: SVGRectElement): DrawingGeometryRect {
+  create(element: SVGRectElement, transform: Matrix3 = DEFAULT_DRAWING_GEOMETRY_TRANSFORM): DrawingGeometryRect {
+    const originX = parseFloat(element.getAttribute('x') || '');
+    const originY = parseFloat(element.getAttribute('y') || '');
+    const width = parseFloat(element.getAttribute('width') || '');
+    const height = parseFloat(element.getAttribute('height') || '');
+
+    const upperLeftTransformed = (new Vector2(originX, originY)).applyMatrix3(transform);
+    const lowerRightTransformed = (new Vector2(originX + width, originY + height)).applyMatrix3(transform);
+
     return {
       type: 'rect',
       element,
-      origin: SVGCoordinates.create(parseFloat(element.getAttribute('x') || ''), parseFloat(element.getAttribute('y') || '')),
-      width: parseFloat(element.getAttribute('width') || ''),
-      height: parseFloat(element.getAttribute('height') || ''),
+      origin: SVGCoordinates.create(upperLeftTransformed.x, upperLeftTransformed.y),
+      width: lowerRightTransformed.x - upperLeftTransformed.x,
+      height: lowerRightTransformed.y - upperLeftTransformed.y,
     };
   },
 };
@@ -79,12 +92,20 @@ export type DrawingGeometryLine = {
   b: SVGCoordinates,
 };
 export const DrawingGeometryLine = {
-  create(element: SVGLineElement): DrawingGeometryLine {
+  create(element: SVGLineElement, transform: Matrix3 = DEFAULT_DRAWING_GEOMETRY_TRANSFORM): DrawingGeometryLine {
+    const aX = parseFloat(element.getAttribute('x1') || '');
+    const aY = parseFloat(element.getAttribute('y1') || '');
+    const bX = parseFloat(element.getAttribute('x2') || '');
+    const bY = parseFloat(element.getAttribute('y2') || '');
+
+    const aTransformed = (new Vector2(aX, aY)).applyMatrix3(transform);
+    const bTransformed = (new Vector2(bX, bY)).applyMatrix3(transform);
+
     return {
       type: 'line',
       element,
-      a: SVGCoordinates.create(parseFloat(element.getAttribute('x1') || ''), parseFloat(element.getAttribute('y1') || '')),
-      b: SVGCoordinates.create(parseFloat(element.getAttribute('x2') || ''), parseFloat(element.getAttribute('y2') || '')),
+      a: SVGCoordinates.create(aTransformed.x, aTransformed.y),
+      b: SVGCoordinates.create(bTransformed.x, bTransformed.y),
     };
   },
 };

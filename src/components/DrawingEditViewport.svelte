@@ -1,10 +1,14 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { Matrix3 } from 'three';
   import { DrawingStore, EditingDrawingStore, HistoryStore } from '$lib/stores';
   import {
     Drawing,
     DrawingGeometry,
     DrawingSurface,
     DrawingSurfaceFoldSet,
+    radiansToDegrees,
+    DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
   } from '$lib/core';
   import type { Numeral } from '$lib/numeral';
 
@@ -84,6 +88,164 @@
     const whitespaceCount = lines[lines.length-1].length - lines[lines.length-1].trimStart().length;
     return lines.map(l => l.startsWith(' ') ? l.slice(whitespaceCount) : l).join('\n');
   }
+
+  // Given a svg transform string, extract a matrix from it for positioning drawing geometries
+  function parseSvgTransform(transformString: string): Matrix3 {
+    const functionRegex = /^([a-zA-Z]+)\((.*?)\)/;
+
+    let transformation = new Matrix3().identity();
+
+    while (true) {
+      const match = functionRegex.exec(transformString);
+      if (!match) {
+        break;
+      }
+      
+      transformString = transformString.slice(match[0].length).trim();
+
+      const functionName = match[1].toLowerCase(), functionArgs = match[2].split(/,\s/);
+
+      const stringToNumber = (s: string | undefined, defaultNumber: number): number => {
+        if (!s) {
+          return defaultNumber;
+        }
+        const result = parseFloat(s);
+        if (isNaN(result)) {
+          return defaultNumber;
+        }
+        return result;
+      };
+
+      switch (functionName) {
+        case 'transform':
+          // translate(x)
+          // translate(x, y)
+          transformation.multiply(
+            new Matrix3().translate(
+              stringToNumber(functionArgs[0], 0),
+              stringToNumber(functionArgs[1], 0),
+            )
+          );
+          break;
+
+        case 'scale':
+          // scale(x)
+          // scale(x, y)
+          const scaleX = stringToNumber(functionArgs[0], 0);
+          transformation.multiply(
+            new Matrix3().scale(
+              scaleX,
+              stringToNumber(functionArgs[1], scaleX),
+            )
+          );
+          break;
+
+        case 'rotate':
+          if (functionArgs.length === 1) {
+            // rotate(a)
+            transformation.multiply(
+              new Matrix3().rotate(
+                radiansToDegrees(stringToNumber(functionArgs[0], 0))
+              )
+            );
+          } else {
+            // rotate(a, cx, cy)
+            // TODO: implement
+          }
+          break;
+
+        case 'skewX':
+        case 'skewY':
+          // skewX(a)
+          // skewY(a)
+          // TODO: implement
+          break;
+
+        case 'matrix':
+          // matrix(a, b, c, d, e, f)
+          const a = stringToNumber(functionArgs[0], 1);
+          const b = stringToNumber(functionArgs[1], 0);
+          const c = stringToNumber(functionArgs[2], 0);
+          const d = stringToNumber(functionArgs[3], 0);
+          const e = stringToNumber(functionArgs[4], 1);
+          const f = stringToNumber(functionArgs[5], 0);
+          transformation.multiply(
+            new Matrix3().fromArray([a, d, 0, b, e, 0, c, f, 1])
+          );
+          break;
+      }
+    }
+    return transformation;
+  }
+
+  // Get a flad list of all geometries within a svg
+  function getDrawingGeometries(
+    rootElem: Element | Document,
+    transformation: Matrix3 = DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
+  ): Array<DrawingGeometry> {
+    return Array.from(rootElem.children).flatMap(child => {
+      // Apply svg transforms to this element and all children of this element.
+      const transformAttribute = child.getAttribute('transform');
+      if (transformAttribute) {
+        transformation = transformation.clone().multiply(parseSvgTransform(transformAttribute));
+      }
+
+      if (child.children.length === 0) {
+        const geometry = DrawingGeometry.create(child, transformation);
+        if (geometry) {
+          return [geometry];
+        } else {
+          return [];
+        }
+      } else {
+        return getDrawingGeometries(child, transformation);
+      }
+    });
+  }
+
+  // When the page resizes, adjust the svg bounds
+  let container: HTMLDivElement | null = null;
+  let resizeObserver: ResizeObserver | null = null;
+  let svgWidth = 0;
+  let svgHeight = 0;
+  onMount(() => {
+    if (!container) {
+      return;
+    }
+
+    const bbox = container.getBoundingClientRect();
+    svgWidth = bbox.width;
+    svgHeight = bbox.height;
+
+    resizeObserver = new ResizeObserver(entries => {
+      const bbox = entries[0].contentRect;
+      svgWidth = bbox.width;
+      svgHeight = bbox.height;
+      console.log(svgWidth, svgHeight)
+    });
+    resizeObserver.observe(container);
+  });
+
+  let viewport = {
+    top: -4,
+    left: -400,
+    zoom: 1,
+  };
+  // function fitToBounds() {
+  //   if (!$EditingDrawingStore) {
+  //     return;
+  //   }
+  //   const drawingWidth = parseInt($EditingDrawingStore.media.element.getAttribute('width'), 10);
+  //   const drawingHeight = parseInt($EditingDrawingStore.media.element.getAttribute('height'), 10);
+  //
+  //   const scale = drawingWidth / svgWidth;
+  //
+  //   viewportScale = scale;
+  // }
+
+  // ----------------------------------------------------------------------------
+  // UPDATER FUNCTIONS
+  // ------------------------------------------------------------------------------
 
   function addFoldSet() {
     if (!$EditingDrawingStore) {
@@ -355,10 +517,7 @@
     left: 0px;
     right: 0px;
     background-color: var(--gray-4);
-  }
-
-  .drawingEditViewport svg {
-    margin-top: var(--space-10);
+    overflow: hidden;
   }
 
   .sidebar {
@@ -366,7 +525,7 @@
     top: var(--space-11);
     left: var(--space-1);
     bottom: var(--space-1);
-    width: 300px;
+    width: calc(300px - var(--space-2));
     background-color: var(--gray-5);
 
     display: flex;
@@ -433,12 +592,84 @@
 </style>
 
 {#if $EditingDrawingStore}
-  <div class="drawingEditViewport">
-    <svg width="500" height="500" viewBox="0 0 500 500">
-      <text transform="translate(20, 20)">{$EditingDrawingStore.id}</text>
+  <div class="drawingEditViewport" bind:this={container}>
+    <svg
+      width={svgWidth}
+      height={svgHeight}
+      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+      on:wheel={event => {
+        event.preventDefault();
+        const dx = event.deltaX;
+        const dy = event.deltaY;
 
-      <!-- FIXME: this doesn't work. -->
-      {@html $EditingDrawingStore.media.contents}
+        if (event.ctrlKey || event.metaKey) {
+          // limit scroll wheel sensitivity for mouse users
+          const limit = 8;
+          const scrollDelta = Math.max(-limit, Math.min(limit, dy));
+
+          const nextZoomFactor =
+            viewport.zoom + viewport.zoom * scrollDelta * -0.01;
+
+          const targetX = viewport.left + event.clientX / viewport.zoom;
+          const targetY = viewport.top + event.clientY / viewport.zoom;
+
+          const top = targetY - event.clientY / nextZoomFactor;
+          const left = targetX - event.clientX / nextZoomFactor;
+
+          viewport = {
+            zoom: nextZoomFactor,
+            top,
+            left,
+          };
+        }
+
+        // otherwise pan
+        viewport = {
+          ...viewport,
+          top: viewport.top + dy / viewport.zoom,
+          left: viewport.left + dx / viewport.zoom,
+        };
+      }}
+    >
+      <g transform={`scale(${viewport.zoom}) translate(${-1 * viewport.left}, ${-1 * viewport.top})`}>
+        <!--
+        <rect
+          x={0}
+          y={0}
+          width={$EditingDrawingStore.media.document && $EditingDrawingStore.media.document.getAttribute('width')} 
+          height={$EditingDrawingStore.media.document && $EditingDrawingStore.media.document.getAttribute('height')} 
+          fill="silver"
+        />
+        -->
+        {#each getDrawingGeometries($EditingDrawingStore.media.document) as drawingGeometry}
+          {#if drawingGeometry.type == "rect"}
+            <rect
+              x={drawingGeometry.origin.x}
+              y={drawingGeometry.origin.y}
+              width={drawingGeometry.width}
+              height={drawingGeometry.height}
+              stroke="red"
+              fill="transparent"
+            />
+          {:else if drawingGeometry.type === "path"}
+            <path
+              d={`
+                M${drawingGeometry.segments[0][0].x},${drawingGeometry.segments[0][0].y}
+                ${drawingGeometry.segments.map(segment => `L${segment[1].x},${segment[1].y}`).join(' ')}
+              `}
+              stroke="blue"
+            />
+          {:else if drawingGeometry.type === "line"}
+            <line
+              x1={drawingGeometry.a.x}
+              y1={drawingGeometry.a.y}
+              x2={drawingGeometry.b.x}
+              y2={drawingGeometry.b.y}
+              stroke="green"
+            />
+          {/if}
+        {/each}
+      </g>
     </svg>
   </div>
 
