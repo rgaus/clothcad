@@ -10,7 +10,7 @@
     radiansToDegrees,
     DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
   } from '$lib/core';
-  import type { Numeral } from '$lib/numeral';
+  import { Numeral } from '$lib/numeral';
   import { Cyan2, Red4, Cyan7, Gray1, Gray10 } from '$lib/color';
 
   import AppBar from './ui/AppBar.svelte';
@@ -589,6 +589,53 @@
       ],
     })($EditingDrawingStore.id, focusedDrawingSurface.id, focusedDrawingSurfaceSelector);
   }
+
+  function updateScale(newScale: Numeral) {
+    if (!$EditingDrawingStore) {
+      return;
+    }
+
+    HistoryStore.createMutation<[Drawing['id'], Drawing['media']['scale']], { previousScale?: Drawing['media']['scale'] }>({
+      name: `Change drawing scale to ${Numeral.serializeToString(newScale)}`,
+
+      forwards: (storeValues, [drawingId, scale], context) => {
+        console.log('FORWARDS', drawingId, scale);
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          context.previousScale = drawing.media.scale;
+
+          const newDrawing = {
+            ...drawing,
+            media: { ...drawing.media, scale },
+          };
+
+          return newDrawing;
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+
+      backwards: (storeValues, [drawingId, _scale], context) => {
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          if (!context.previousScale) {
+            throw new Error('context.previousScale was not set, cannot run backwards function!');
+          }
+
+          const newDrawing = {
+            ...drawing,
+            media: { ...drawing.media, scale: context.previousScale },
+          };
+          return newDrawing;
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+
+      provides: (args) => [
+        {operation: 'update', item: {itemType: 'drawing', itemId: args[0]}},
+      ],
+      requires: (args) => [
+        {operation: 'update', item: {itemType: 'drawing', itemId: args[0]}},
+      ],
+    })($EditingDrawingStore.id, newScale);
+  }
 </script>
 
 <style>
@@ -908,26 +955,12 @@
         value={focusedDrawingScale}
         placeholder="eg: 1"
         on:change={e => {
-          if (!$EditingDrawingStore) {
+          const newScale = e.detail;
+          if (!newScale) {
             return;
           }
 
-          const drawingId = $EditingDrawingStore.id;
-          DrawingStore.update(value => {
-            return DrawingStore.updateItem(value, drawingId, drawing => {
-              if (!e.detail) {
-                return drawing;
-              }
-              const newDrawing = {
-                ...drawing,
-                media: {
-                  ...drawing.media,
-                  scale: e.detail,
-                },
-              };
-              return newDrawing;
-            });
-          });
+          updateScale(newScale);
         }}
       />
     {/if}
