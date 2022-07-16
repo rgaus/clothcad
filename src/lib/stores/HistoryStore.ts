@@ -448,12 +448,57 @@ export const HistoryStore = {
     });
   },
 
-  updateHistoryItem(historyItemId: HistoryListItem['id'], updater: (item: HistoryListItem) => HistoryListItem) {
+  updateHistoryItemName(historyItemId: HistoryListItem['id'], newName: string) {
     return HistoryStore.update(value => {
       const newValue = {
         ...value,
-        history: value.history.map(n => n.id === historyItemId ? updater(n) : n),
+        history: value.history.map(n => n.id === historyItemId ? {...n, name: newName} : n),
       };
+      return newValue;
+    });
+  },
+
+  // FIXME: It's possible to put your history stack into a werd state by deleting items that create
+  // things that later items modify. Update this function to have logic where if an item which
+  // provides a "create" is removed, it removes all items which require that item in any way
+  remove(index: number) {
+    if (index === 0) {
+      throw new Error('Cannot remove history item at index 0!');
+    }
+
+    return HistoryStore.update(value => {
+      const initialStoreValues = getInitialStoreValues();
+      const initialHistoryIndex = value.currentHistoryIndex;
+
+      console.groupCollapsed('%cREMOVE', 'font-weight:bold;background-color:red;padding:2px;', index);
+
+      // Go to the item before the item to remove
+      let [newValue, newStoreValues] = HistoryStore.toInMemory(
+        value,
+        initialStoreValues,
+        index-1,
+      );
+
+      // Remove the item from the history stack
+      newValue = {
+        ...value,
+        history: [
+          ...newValue.history.slice(0, index),
+          ...newValue.history.slice(index+1),
+        ],
+        currentHistoryIndex: index-1,
+      };
+
+      // Replay back forwards all the history on top of the new state
+      [newValue, newStoreValues] = HistoryStore.toInMemory(
+        newValue,
+        newStoreValues,
+        initialHistoryIndex,
+      );
+
+      console.groupEnd();
+
+      updateStoreValues(initialStoreValues, newStoreValues);
       return newValue;
     });
   },

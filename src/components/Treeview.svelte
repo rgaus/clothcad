@@ -435,11 +435,11 @@
                   light
                   focused
                   on:blur={() => {
-                    HistoryStore.updateHistoryItem(historyItem.id, item => ({...item, name: focusedHistoryItemName}));
+                    HistoryStore.updateHistoryItemName(historyItem.id, focusedHistoryItemName);
                     focusedHistoryItemId = null;
                   }}
                   on:enter={() => {
-                    HistoryStore.updateHistoryItem(historyItem.id, item => ({...item, name: focusedHistoryItemName}));
+                    HistoryStore.updateHistoryItemName(historyItem.id, focusedHistoryItemName);
                     focusedHistoryItemId = null;
                   }}
                 />
@@ -453,6 +453,11 @@
                 focusedHistoryItemId = historyItem.id;
                 focusedHistoryItemName = historyItem.name;
               }}
+            />
+            <Button
+              text="Delete"
+              on:click={() => HistoryStore.remove(index)}
+              disabled={index === 0}
             />
           </li>
         {/each}
