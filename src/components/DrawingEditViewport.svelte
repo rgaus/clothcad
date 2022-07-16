@@ -11,11 +11,13 @@
     DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
   } from '$lib/core';
   import type { Numeral } from '$lib/numeral';
+  import { Cyan2, Red4, Cyan7, Gray1, Gray10 } from '$lib/color';
 
   import AppBar from './ui/AppBar.svelte';
   import Button from './ui/Button.svelte';
   import TextField from './ui/TextField.svelte';
   import NumberInputField from './ui/NumberInputField.svelte';
+  import DrawingEditViewportSVGLabel from './DrawingEditViewportSVGLabel.svelte';
 
   // When the edited drawing updates, update the scale
   let focusedDrawingScale: Numeral | null = null;
@@ -182,11 +184,16 @@
     return transformation;
   }
 
-  // Get a flad list of all geometries within a svg
+  // Get a flat list of all geometries within a svg
+  type DrawingGeometryWithMetadata = DrawingGeometry & {
+    mode: 'none' | 'focused-drawing-surface' | 'focused-fold' | 'muted',
+    selector: string | null;
+  };
   function getDrawingGeometries(
     rootElem: Element | Document,
+    focusedDrawingSurface: DrawingSurface | null,
     transformation: Matrix3 = DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
-  ): Array<DrawingGeometry> {
+  ): Array<DrawingGeometryWithMetadata> {
     return Array.from(rootElem.children).flatMap(child => {
       // Apply svg transforms to this element and all children of this element.
       const transformAttribute = child.getAttribute('transform');
@@ -196,13 +203,66 @@
 
       if (child.children.length === 0) {
         const geometry = DrawingGeometry.create(child, transformation);
+
         if (geometry) {
-          return [geometry];
+          // The child mode defines how the child should render
+          // ie, if a drawing surface is selected, highlight the surface element and its folds
+          const mode: DrawingGeometryWithMetadata['mode'] = (() => {
+            // If nothing is focused, then use "none"
+            if (!focusedDrawingSurface || !focusedDrawingSurface.geometry) {
+              return 'none';
+            }
+
+            if (geometry.element === focusedDrawingSurface.geometry.element) {
+              return 'focused-drawing-surface';
+            }
+
+            const folds = focusedDrawingSurface.foldSets.flatMap(foldSet => foldSet.folds);
+            if (folds.find(fold => fold.geometry && geometry.element === fold.geometry.element)) {
+              return 'focused-fold';
+            }
+
+            return 'muted';
+          })();
+
+          // The selector is the css selector that was used to target this element
+          const selector = (() => {
+            if (!$EditingDrawingStore) {
+              return null;
+            }
+            if (!focusedDrawingSurface) {
+              return null;
+            }
+
+            switch (mode) {
+              case 'none':
+                return null;
+              case 'muted':
+                return null;
+              case 'focused-drawing-surface':
+                return focusedDrawingSurface.geometrySelector;
+              case 'focused-fold':
+                const foldSet = focusedDrawingSurface.foldSets.find(foldSet => {
+                  return foldSet.folds.find(fold => fold.geometry && geometry.element === fold.geometry.element);
+                });
+                if (!foldSet) {
+                  return null;
+                }
+
+                return DrawingSurfaceFoldSet.getMoreSpecificSelectorForFold(
+                  foldSet,
+                  $EditingDrawingStore.media,
+                  geometry,
+                );
+            }
+          })();
+
+          return [{...geometry, mode, selector}];
         } else {
           return [];
         }
       } else {
-        return getDrawingGeometries(child, transformation);
+        return getDrawingGeometries(child, focusedDrawingSurface, transformation);
       }
     });
   }
@@ -386,7 +446,6 @@
             drawingSurfaceFoldSet => {
               context.oldGeometrySelector = drawingSurfaceFoldSet.geometrySelector;
 
-              console.log('SVG', drawing.media.document, newSelector, findInSVGAll(newSelector, drawing));
               return {
                 ...drawingSurfaceFoldSet,
                 geometrySelector: newSelector,
@@ -666,32 +725,84 @@
           fill="silver"
         />
         -->
-        {#each getDrawingGeometries($EditingDrawingStore.media.document) as drawingGeometry}
-          {#if drawingGeometry.type == "rect"}
+        {#each getDrawingGeometries($EditingDrawingStore.media.document, focusedDrawingSurface) as drawingGeometryWithMetadata}
+          {#if drawingGeometryWithMetadata.type == "rect"}
             <rect
-              x={drawingGeometry.origin.x}
-              y={drawingGeometry.origin.y}
-              width={drawingGeometry.width}
-              height={drawingGeometry.height}
-              stroke="red"
-              fill="transparent"
+              x={drawingGeometryWithMetadata.origin.x}
+              y={drawingGeometryWithMetadata.origin.y}
+              width={drawingGeometryWithMetadata.width}
+              height={drawingGeometryWithMetadata.height}
+              fill={{
+                "none": Gray1,
+                "focused-drawing-surface": Cyan2,
+                "focused-fold": "", // This is an impossible case
+                "muted": "rgba(31, 31, 31, 0.1)", // FIXME: this is "Gray10" with 10% opacity
+              }[drawingGeometryWithMetadata.mode]}
+              stroke={{
+                "none": Gray10,
+                "focused-drawing-surface": Cyan7,
+                "focused-fold": "", // This is an impossible case
+                "muted": "rgba(31, 31, 31, 0.5)", // FIXME: this is "Gray10" with 50% opacity
+              }[drawingGeometryWithMetadata.mode]}
+              stroke-width={2 / viewport.zoom}
             />
-          {:else if drawingGeometry.type === "path"}
+            {#if drawingGeometryWithMetadata.selector}
+              <DrawingEditViewportSVGLabel
+                x={drawingGeometryWithMetadata.origin.x}
+                y={drawingGeometryWithMetadata.origin.y}
+                label={drawingGeometryWithMetadata.selector}
+                fill={Cyan7}
+                viewport={viewport}
+              />
+            {/if}
+          {:else if drawingGeometryWithMetadata.type === "path"}
             <path
               d={`
-                M${drawingGeometry.segments[0][0].x},${drawingGeometry.segments[0][0].y}
-                ${drawingGeometry.segments.map(segment => `L${segment[1].x},${segment[1].y}`).join(' ')}
+                M${drawingGeometryWithMetadata.segments[0][0].x},${drawingGeometryWithMetadata.segments[0][0].y}
+                ${drawingGeometryWithMetadata.segments.map(segment => `L${segment[1].x},${segment[1].y}`).join(' ')}
               `}
-              stroke="blue"
+              stroke={{
+                "none": Gray10,
+                "focused-drawing-surface": "", // This is an impossible case
+                "focused-fold": Red4,
+                "muted": "rgba(31, 31, 31, 0.5)", // FIXME: this is "Gray10" with 50% opacity
+              }[drawingGeometryWithMetadata.mode]}
+              stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `${2 / viewport.zoom}px` : ""}
+              stroke-width={2 / viewport.zoom}
             />
-          {:else if drawingGeometry.type === "line"}
+            {#if drawingGeometryWithMetadata.selector}
+              <DrawingEditViewportSVGLabel
+                x={drawingGeometryWithMetadata.segments[0][0].x}
+                y={drawingGeometryWithMetadata.segments[0][0].y}
+                label={drawingGeometryWithMetadata.selector}
+                fill={Red4}
+                viewport={viewport}
+              />
+            {/if}
+          {:else if drawingGeometryWithMetadata.type === "line"}
             <line
-              x1={drawingGeometry.a.x}
-              y1={drawingGeometry.a.y}
-              x2={drawingGeometry.b.x}
-              y2={drawingGeometry.b.y}
-              stroke="green"
+              x1={drawingGeometryWithMetadata.a.x}
+              y1={drawingGeometryWithMetadata.a.y}
+              x2={drawingGeometryWithMetadata.b.x}
+              y2={drawingGeometryWithMetadata.b.y}
+              stroke={{
+                "none": Gray10,
+                "focused-drawing-surface": "", // This is an impossible case
+                "focused-fold": Red4,
+                "muted": "rgba(31, 31, 31, 0.5)", // FIXME: this is "Gray10" with 50% opacity
+              }[drawingGeometryWithMetadata.mode]}
+              stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `${2 / viewport.zoom}px` : ""}
+              stroke-width={2 / viewport.zoom}
             />
+            {#if drawingGeometryWithMetadata.selector}
+              <DrawingEditViewportSVGLabel
+                x={drawingGeometryWithMetadata.a.x}
+                y={drawingGeometryWithMetadata.a.y}
+                label={drawingGeometryWithMetadata.selector}
+                fill={Red4}
+                viewport={viewport}
+              />
+            {/if}
           {/if}
         {/each}
       </g>

@@ -332,8 +332,8 @@
                     });
                     return { ...value, SurfaceStore: newValue };
                   },
-                  requires: (args) => [],
-                  provides: (args) => [],
+                  requires: () => [],
+                  provides: () => [],
                 })(surface.id);
               }}
             >
