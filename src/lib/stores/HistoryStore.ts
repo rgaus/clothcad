@@ -392,16 +392,18 @@ export const HistoryStore = {
       // 3. Keep traversing recursively down until a parent's parent's parent (etc) is in the
       //    history list.
       let previousHistoryItemId: HistoryListItem['id'] | null = previousId;
-      console.log('PREV', previousId);
-      while (!value.history.find(i => i.id === previousHistoryItemId)) {
-        const result = value.undoneHistoryItems.find(i => i.item.id === previousHistoryItemId);
-        if (!result) {
-          throw new Error(`Unable to find history item with id ${previousHistoryItemId}!`);
+      if (value.history.length > 0) {
+        console.log('PREV', previousId);
+        while (!value.history.find(i => i.id === previousHistoryItemId)) {
+          const result = value.undoneHistoryItems.find(i => i.item.id === previousHistoryItemId);
+          if (!result) {
+            throw new Error(`Unable to find history item with id ${previousHistoryItemId}!`);
+          }
+          previousHistoryItemId = result.previousId;
+          console.log('PREV', previousHistoryItemId);
         }
-        previousHistoryItemId = result.previousId;
-        console.log('PREV', previousHistoryItemId);
+        console.log('FINAL PREV', previousHistoryItemId);
       }
-      console.log('FINAL PREV', previousHistoryItemId);
 
       const previousHistoryItemIndex = value.history.findIndex(item => item.id === previousId);
 
