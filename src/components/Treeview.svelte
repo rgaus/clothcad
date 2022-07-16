@@ -11,6 +11,7 @@
   import Button from './ui/Button.svelte';
 
   import type { FixMe } from '$lib/types/fixme';
+  import { LiteralNumeral } from '$lib/numeral';
 
   type TabItem = 'drawing' | 'surface' | 'fold' | 'history';
 
@@ -54,6 +55,69 @@
       ] : [],
     });
     mutation();
+  }
+  function uploadSVG() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.svg';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', (event) => {
+      const fileList = (event.target as FixMe).files;
+      if (fileList.length === 0) {
+        return;
+      }
+
+      // Read file from file handle
+      const reader = new FileReader();
+      reader.addEventListener('load', (event) => {
+        HistoryStore.createMutation<[string, string], {drawingId: Drawing['id']}>({
+          name: `Create drawing from ${fileList[0].name}`,
+          forwards: (storeValues, [name, contents], context) => {
+            let drawingStoreValue = storeValues.DrawingStore;
+
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(contents, "image/svg+xml");
+
+            const drawing = Drawing.create({
+              name,
+
+              media: {
+                type: 'svg/literal',
+                scale: LiteralNumeral.create(1),
+                contents,
+                document: svgDoc,
+              },
+              surfaces: [],
+            });
+
+            if (context.drawingId) {
+              drawing.id = context.drawingId;
+            } else {
+              context.drawingId = drawing.id;
+            }
+            drawingStoreValue = DrawingStore.addItem(drawingStoreValue, drawing);
+            return { ...storeValues, DrawingStore: drawingStoreValue };
+          },
+          backwards: (storeValues, _args, context) => {
+            let drawingStoreValue = storeValues.DrawingStore;
+            if (!context.drawingId) {
+              throw new Error(`Error creating drawing: context.drawingId was not set, this should not happen!`);
+            }
+            drawingStoreValue = DrawingStore.removeItem(drawingStoreValue, context.drawingId);
+            return { ...storeValues, DrawingStore: drawingStoreValue };
+          },
+          provides: (_args, context) => context.drawingId ? [
+            {operation: 'create', item: {itemType: 'drawing', itemId: context.drawingId}},
+            {operation: 'update', item: {itemType: 'drawing', itemId: context.drawingId}},
+          ] : [],
+        })(fileList[0].name, (event.target as FixMe).result);
+      });
+      reader.readAsText(fileList[0]);
+    });
+    input.click();
+
+    document.body.removeChild(input);
   }
 </script>
 
@@ -198,6 +262,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-grow: 0;
+    flex-shrink: 0;
   }
 
   .label {
@@ -247,6 +313,10 @@
       <Button
         on:click={() => createSample()}
         text="Create Sample"
+      />
+      <Button
+        on:click={() => uploadSVG()}
+        text="Upload"
       />
       <ul class="list">
         {#each $DrawingStore.items as drawing (drawing.id)}
