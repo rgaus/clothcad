@@ -10,6 +10,8 @@
   import TextField from './ui/TextField.svelte';
   import Button from './ui/Button.svelte';
 
+  import type { FixMe } from '$lib/types/fixme';
+
   type TabItem = 'drawing' | 'surface' | 'fold' | 'history';
 
   let activeTab: TabItem = 'drawing';
@@ -18,8 +20,8 @@
   let focusedHistoryItemName = '';
 
   FocusedItemStore.subscribe(focusedItem => {
-    if (focusedItem && focusedItem.itemType !== activeTab) {
-      activeTab = focusedItem.itemType;
+    if (focusedItem && focusedItem.itemType !== activeTab && ["drawing", "surface", "fold"].includes(focusedItem.itemType)) {
+      activeTab = focusedItem.itemType as FixMe;
     }
   });
 
@@ -45,6 +47,10 @@
         drawingStoreValue = DrawingStore.removeItem(drawingStoreValue, context.drawingId);
         return { ...storeValues, DrawingStore: drawingStoreValue };
       },
+      provides: (_args, context) => context.drawingId ? [
+        {operation: 'create', item: {itemType: 'drawing', itemId: context.drawingId}},
+        {operation: 'update', item: {itemType: 'drawing', itemId: context.drawingId}},
+      ] : [],
     });
     mutation();
   }
@@ -326,6 +332,8 @@
                     });
                     return { ...value, SurfaceStore: newValue };
                   },
+                  requires: (args) => [],
+                  provides: (args) => [],
                 })(surface.id);
               }}
             >

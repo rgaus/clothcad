@@ -51,7 +51,7 @@
             }
 
             HistoryStore.createMutation({
-              name: `Color ${focusedSurface.name} ${focusedSurface.colorFamily}`,
+              name: `Color ${focusedSurface.name} ${colorFamily}`,
               forwards: (value, [surfaceId]) => {
                 const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
                   return {
@@ -70,6 +70,12 @@
                 });
                 return { ...value, SurfaceStore: newValue };
               },
+              requires: (args) => [
+                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
+              ],
+              provides: (args) => [
+                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
+              ],
             })(focusedSurface.id);
           }}
         />
@@ -112,6 +118,12 @@
                 });
                 return { ...value, SurfaceStore: newValue };
               },
+              requires: (args) => [
+                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
+              ],
+              provides: (args) => [
+                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
+              ],
             })(focusedSurface.id);
           }}
         />

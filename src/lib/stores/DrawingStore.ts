@@ -46,6 +46,8 @@ export const DrawingStore = {
     }
 
     HistoryStore.createMutation<[Drawing['id']], {
+      drawingSurfaceToSurfaceId?: { [drawingSurfaceId: string]: Surface['id'] },
+      drawingSurfaceToFoldIds?: { [drawingSurfaceId: string]: { [foldIndex: number]: LinearFold['id']} },
       previousSurfaceValues?: { [surfaceId: string]: Surface | null },
       previousDrawingSurfaceToSurfaceMapping?: {[drawingSurfaceId: string]: Partial<DrawingSurface>},
     }>({
@@ -54,6 +56,8 @@ export const DrawingStore = {
         let surfaceStoreValue = storeValues.SurfaceStore;
         let drawingStoreValue = storeValues.DrawingStore;
 
+        context.drawingSurfaceToSurfaceId = context.drawingSurfaceToSurfaceId || {};
+        context.drawingSurfaceToFoldIds = context.drawingSurfaceToFoldIds || {};
         context.previousSurfaceValues = {};
         context.previousDrawingSurfaceToSurfaceMapping = {};
 
@@ -90,7 +94,7 @@ export const DrawingStore = {
           console.log('FACE', face);
 
           // Iterate through all the floldSets and create / update the folds on the surface
-          const linearFolds: Array<LinearFold> = [];
+          let linearFolds: Array<LinearFold> = [];
           const foldSets = drawingSurface.foldSets.map(foldSet => {
             const folds = foldSet.folds.map(({foldId, geometry}) => {
               if (!geometry) {
@@ -138,9 +142,24 @@ export const DrawingStore = {
             });
             return { ...foldSet, folds };
           });
-          console.log('FOLDSET', foldSets);
+          linearFolds = linearFolds.map((f, i) => {
+            if (!context.drawingSurfaceToFoldIds) {
+              throw new Error(`context.drawingSurfaceToFoldIds is not defined, this should be impossible!`);
+            }
+            if (!context.drawingSurfaceToFoldIds[drawingSurface.id]) {
+              context.drawingSurfaceToFoldIds[drawingSurface.id] = {};
+            }
+            const foldId = context.drawingSurfaceToFoldIds[drawingSurface.id][i];
+            if (foldId) {
+              f = { ...f, id: foldId };
+            } else {
+              context.drawingSurfaceToFoldIds[drawingSurface.id][i] = f.id;
+            }
+            return f;
+          });
+          console.log('FOLDS', foldSets, linearFolds);
 
-          // Create a surface to attach the folds and planar face to
+          // Create / update a surface to attach the folds and planar face to
           let surface: Surface;
           const surfaceOrNull = SurfaceStore.get(surfaceStoreValue, drawingSurface.surfaceId || '');
           if (surfaceOrNull) {
@@ -157,7 +176,14 @@ export const DrawingStore = {
               },
             );
           } else {
+            // Create a new surface, and ensure it has a predicable id
             surface = Surface.create(face, linearFolds);
+            if (context.drawingSurfaceToSurfaceId[drawingSurface.id]) {
+              surface.id = context.drawingSurfaceToSurfaceId[drawingSurface.id];
+            } else {
+              context.drawingSurfaceToSurfaceId[drawingSurface.id] = surface.id;
+            }
+
             surfaceStoreValue = SurfaceStore.addItem(surfaceStoreValue, surface);
             context.previousSurfaceValues[surface.id] = null;
           }
@@ -181,7 +207,7 @@ export const DrawingStore = {
               };
             });
           });
-          console.log('NEW STATE', drawingStoreValue);
+          console.log('NEW STATE', surfaceStoreValue, drawingStoreValue);
           console.groupEnd();
         }
 
@@ -231,6 +257,27 @@ export const DrawingStore = {
           SurfaceStore: surfaceStoreValue,
           DrawingStore: drawingStoreValue,
         };
+      },
+      requires: (_args, context) => {
+        if (!context.previousDrawingSurfaceToSurfaceMapping) {
+          return [];
+        }
+        return Object.keys(context.previousDrawingSurfaceToSurfaceMapping).map(id => ({
+          operation: 'update' as const,
+          item: {itemType: 'drawing-surface' as const, itemId: id},
+        }));
+      },
+      provides: (_args, context) => {
+        if (!context.previousSurfaceValues) {
+          return [];
+        }
+        return Object.keys(context.previousSurfaceValues).flatMap(id => [{
+          operation: 'create' as const,
+          item: {itemType: 'surface' as const, itemId: id},
+        }, {
+          operation: 'update' as const,
+          item: {itemType: 'surface' as const, itemId: id},
+        }]);
       },
     })(drawingStoreValue.editing.id);
 

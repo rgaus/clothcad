@@ -122,6 +122,17 @@
 
           return { ...storeValues, SurfaceStore: value };
         },
+
+        // Requires the surface to spilt, and provides two new surfaces
+        requires: (args) => args[0] ? [
+          {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
+        ] : [],
+        provides: (_args, context) => context.surfaceAId && context.surfaceBId ? [
+          {operation: 'create', item: {itemType: 'surface', itemId: context.surfaceAId}},
+          {operation: 'update', item: {itemType: 'surface', itemId: context.surfaceAId}},
+          {operation: 'create', item: {itemType: 'surface', itemId: context.surfaceBId}},
+          {operation: 'update', item: {itemType: 'surface', itemId: context.surfaceBId}},
+        ] : [],
       })(focusedSurface.id, focusedFoldId);
     });
 

@@ -75,8 +75,12 @@
           value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
           return { ...storeValues, SurfaceStore: value };
         },
-        requireFreshlyCreated: (args) => [
-          { itemType: 'surface', itemId: args[2] },
+        // This is an update to the parent surface which results in updates to the focused surface
+        requires: (args) => [
+          {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
+        ],
+        provides: (args) => [
+          {operation: 'update', item: {itemType: 'surface', itemId: args[2]}},
         ],
       })(focusedSurface.parentId, focusedFoldId, focusedSurface.id, angle);
     });

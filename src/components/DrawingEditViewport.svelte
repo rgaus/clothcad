@@ -60,16 +60,20 @@
     }
   }
 
-  function findInSVGAll(selector: string): Array<Element> {
-    if (!$EditingDrawingStore) {
-      return [];
+  function findInSVGAll(selector: string, drawing?: Drawing): Array<Element> {
+    if (!drawing) {
+      if (!$EditingDrawingStore) {
+        return [];
+      }
+      drawing = $EditingDrawingStore;
     }
+
     if (selector.length === 0) {
       return [];
     }
 
     try {
-      const result = $EditingDrawingStore.media.document.querySelectorAll(selector);
+      const result = drawing.media.document.querySelectorAll(selector);
       return Array.from(result);
     } catch (err) {
       return [];
@@ -221,7 +225,6 @@
       const bbox = entries[0].contentRect;
       svgWidth = bbox.width;
       svgHeight = bbox.height;
-      console.log(svgWidth, svgHeight)
     });
     resizeObserver.observe(container);
   });
@@ -299,6 +302,10 @@
         });
         return { ...storeValues, DrawingStore: value };
       },
+      provides: (_args, context) => context.foldSetId ? [
+        {operation: 'create', item: {itemType: 'drawing-surface-fold-set', itemId: context.foldSetId}},
+        {operation: 'update', item: {itemType: 'drawing-surface-fold-set', itemId: context.foldSetId}},
+      ] : [],
     })($EditingDrawingStore.id, focusedDrawingSurface.id);
   }
 
@@ -346,6 +353,13 @@
 
         return { ...storeValues, DrawingStore: newValue };
       },
+      requires: (args) => [
+        {operation: 'update', item: {itemType: 'drawing', itemId: args[0]}},
+      ],
+      provides: (_args, context) => context.drawingSurfaceId ? [
+        {operation: 'create', item: {itemType: 'drawing-surface', itemId: context.drawingSurfaceId}},
+        {operation: 'update', item: {itemType: 'drawing-surface', itemId: context.drawingSurfaceId}},
+      ] : [],
     });
     mutation($EditingDrawingStore.id);
   }
@@ -358,14 +372,12 @@
       return;
     }
 
-    const newSelector = foldSetSelectors[drawingSurfaceFoldSetId];
-
     HistoryStore.createMutation<
-      [Drawing['id'], DrawingSurface['id'], DrawingSurfaceFoldSet['id']],
+      [Drawing['id'], DrawingSurface['id'], DrawingSurfaceFoldSet['id'], DrawingSurfaceFoldSet['geometrySelector']],
       { oldGeometrySelector: DrawingSurfaceFoldSet['geometrySelector'] }
     >({
       name: `Update fold set geometry`,
-      forwards: (storeValues, [drawingId, drawingSurfaceId, drawingSurfaceFoldSetId], context) => {
+      forwards: (storeValues, [drawingId, drawingSurfaceId, drawingSurfaceFoldSetId, newSelector], context) => {
         const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
           return Drawing.updateFoldSet(
             drawing,
@@ -377,7 +389,7 @@
               return {
                 ...drawingSurfaceFoldSet,
                 geometrySelector: newSelector,
-                folds: findInSVGAll(newSelector).map(element => {
+                folds: findInSVGAll(newSelector, drawing).map(element => {
                   const geometry = DrawingGeometry.create(element);
                   if (!geometry) {
                     throw new Error(`Unable to parse this svg element into a fold: ${element.outerHTML}`);
@@ -393,7 +405,7 @@
         });
         return { ...storeValues, DrawingStore: value };
       },
-      backwards: (storeValues, [drawingId, drawingSurfaceId, drawingSurfaceFoldSetId], context) => {
+      backwards: (storeValues, [drawingId, drawingSurfaceId, drawingSurfaceFoldSetId, _newSelector], context) => {
         const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
           return Drawing.updateFoldSet(
             drawing,
@@ -407,7 +419,7 @@
               return {
                 ...drawingSurfaceFoldSet,
                 geometrySelector: context.oldGeometrySelector,
-                folds: findInSVGAll(context.oldGeometrySelector).map(element => {
+                folds: findInSVGAll(context.oldGeometrySelector, drawing).map(element => {
                   const geometry = DrawingGeometry.create(element);
                   if (!geometry) {
                     throw new Error(`Unable to parse this svg element into a fold: ${element.outerHTML}`);
@@ -423,7 +435,13 @@
         });
         return { ...storeValues, DrawingStore: value };
       },
-    })($EditingDrawingStore.id, focusedDrawingSurface.id, drawingSurfaceFoldSetId);
+      requires: (args) => [
+        {operation: 'update', item: {itemType: 'drawing-surface-fold-set', itemId: args[2]}},
+      ],
+      provides: (args) => [
+        {operation: 'update', item: {itemType: 'drawing-surface-fold-set', itemId: args[2]}},
+      ],
+    })($EditingDrawingStore.id, focusedDrawingSurface.id, drawingSurfaceFoldSetId, foldSetSelectors[drawingSurfaceFoldSetId]);
   }
 
   function updateFocusedDrawingSurfaceSelector() {
@@ -492,7 +510,7 @@
       backwards: (storeValues, [drawingId, drawingSurfaceId, _selector]) => {
         // Reset back to original values
         const newDrawingStoreValue = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
-          console.log('B UPDATED DRAWING SURFACE', existingDrawingSurface.geometrySelector, existingDrawingSurface.geometry);
+          // console.log('B UPDATED DRAWING SURFACE', existingDrawingSurface.geometrySelector, existingDrawingSurface.geometry);
           return Drawing.updateSurface(drawing, drawingSurfaceId, drawingSurface => {
             return {
               ...drawingSurface,
@@ -503,6 +521,12 @@
         });
         return { ...storeValues, DrawingStore: newDrawingStoreValue };
       },
+      requires: (args) => [
+        {operation: 'update', item: {itemType: 'drawing-surface', itemId: args[1]}},
+      ],
+      provides: (args) => [
+        {operation: 'update', item: {itemType: 'drawing-surface', itemId: args[1]}},
+      ],
     })($EditingDrawingStore.id, focusedDrawingSurface.id, focusedDrawingSurfaceSelector);
   }
 </script>

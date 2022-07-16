@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 
-import type { Item } from '$lib/types/item';
+import { Item } from '$lib/types/item';
+import type { CreatedItem, UpdatedItem, DeletedItem } from '$lib/types/item';
 import type { FixMe } from '$lib/types/fixme';
 import { generateId } from '$lib/id';
 
@@ -48,6 +49,9 @@ export type HistoryListItem<A = Array<any>, C = object> = {
   args: A;
   context: C;
 
+  provides?: (args: A, context: C) => Array<CreatedItem | UpdatedItem | DeletedItem>;
+  requires?: (args: A, context: C) => Array<CreatedItem | UpdatedItem | DeletedItem>;
+
   // requireExists?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
   requireFreshlyCreated?: (args: A, context: C) => Array<Item>;
 };
@@ -80,42 +84,54 @@ export const HistoryStore = {
   ) {
     return (...args: A) => {
       HistoryStore.update(value => {
+        const context = historyItemParams.context || {};
         const historyItem: HistoryListItem<A, Partial<C>> = {
           ...historyItemParams,
           id: generateId('his'),
           args,
-          context: historyItemParams.context || {},
+          context,
           updatedAt: new Date().toISOString(),
         };
 
         const initialStoreValues = getInitialStoreValues();
+        console.log('STORE VALUES', initialStoreValues);
         let storeValues = initialStoreValues;
 
         // Requirements allow a mutation to define what must be newly created before the mutation
         // can run
-        const requirements = historyItem.requireFreshlyCreated ? historyItem.requireFreshlyCreated(historyItem.args, historyItem.context) : [];
+        // const requirements = historyItem.requireFreshlyCreated ? historyItem.requireFreshlyCreated(historyItem.args, historyItem.context) : [];
+        const requirements = historyItem.requires ? historyItem.requires(historyItem.args, historyItem.context) : [];
         let historyIndexSteppedBackwardsTo = value.currentHistoryIndex + 1;
+        console.log('>', requirements);
         if (requirements.length > 0) {
           let previousStoreValues = storeValues;
 
-          // Go backwards until the requirements are no longer met
+          // Figure out the initial state of all requirements
+          const provides = historyItem.provides ? historyItem.provides(historyItem.args, historyItem.context) : [];
+          let metRequirements: Array<boolean> = requirements.map(() => false);
+          console.log('INITIAL PROVIDES', provides, 'REQS', requirements, 'RESULTS:', metRequirements);
+
+          // Go backwards until the requirements are all met
           for (let index = value.currentHistoryIndex; index >= 0; index -= 1) {
             const historyItem = value.history[index];
+            console.log('AT INDEX', index, historyItem.name);
 
             previousStoreValues = storeValues;
             storeValues = historyItem.backwards(storeValues, historyItem.args, historyItem.context);
 
-            const allRequirementsMet = requirements.every(({itemType, itemId}) => {
-              switch (itemType) {
-                case 'surface':
-                  return SurfaceStore.get(storeValues.SurfaceStore, itemId) !== null;
-                case 'fold':
-                  return SurfaceStore.getFold(storeValues.SurfaceStore, itemId) !== null;
-                default:
-                  throw new Error(`Unknown requirement with itemType ${itemType}!`);
+            // Test requirements at this new point in history
+            const provides = historyItem.provides ? historyItem.provides(historyItem.args, historyItem.context) : [];
+            for (let i = 0; i < requirements.length; i += 1) {
+              const found = provides.find(
+                p => p.operation === requirements[i].operation && Item.equals(p.item, requirements[i].item)
+              );
+              if (found) {
+                metRequirements[i] = true;
               }
-            });
-            if (!allRequirementsMet) {
+            }
+            console.log('REQS STATE', requirements, metRequirements);
+
+            if (metRequirements.every(i => i === true)) {
               // Ok! We're finally done going back
               // The "previous value" now becomes the value we care about going forward
               storeValues = previousStoreValues;
@@ -127,6 +143,7 @@ export const HistoryStore = {
           }
         }
         // console.log('NOW AT', value, historyIndexSteppedBackwardsTo);
+        console.log('NOW AT', storeValues);
 
         // Migrate the state forwards with the current history item
         storeValues = historyItem.forwards(storeValues, historyItem.args, historyItem.context);
@@ -146,6 +163,7 @@ export const HistoryStore = {
           ) {
             const historyItem = value.history[index];
             storeValues = historyItem.forwards(storeValues, historyItem.args, historyItem.context);
+            console.log('AT INDEX', index, historyItem.name, storeValues);
           }
         }
 
