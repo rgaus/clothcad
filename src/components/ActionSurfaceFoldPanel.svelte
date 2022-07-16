@@ -75,9 +75,10 @@
           value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
           return { ...storeValues, SurfaceStore: value };
         },
-        // This is an update to the parent surface which results in updates to the focused surface
+        // This is an update purely to the surface being folded and is unrelaed to the parent
+        // surface
         requires: (args) => [
-          {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
+          {operation: 'update', item: {itemType: 'surface', itemId: args[2]}},
         ],
         provides: (args) => [
           {operation: 'update', item: {itemType: 'surface', itemId: args[2]}},

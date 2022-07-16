@@ -386,6 +386,7 @@
             drawingSurfaceFoldSet => {
               context.oldGeometrySelector = drawingSurfaceFoldSet.geometrySelector;
 
+              console.log('SVG', drawing.media.document, newSelector, findInSVGAll(newSelector, drawing));
               return {
                 ...drawingSurfaceFoldSet,
                 geometrySelector: newSelector,

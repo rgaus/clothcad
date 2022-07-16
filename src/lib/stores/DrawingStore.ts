@@ -5,8 +5,10 @@ import { SurfaceStore } from './SurfaceStore';
 import { HistoryStore } from './HistoryStore';
 import { createCollectionStore } from './BaseCollectionStore';
 
-import { Drawing, DrawingSurface } from '$lib/core';
 import {
+  Drawing,
+  DrawingSurface,
+  DrawingSurfaceFoldSet,
   SpacialCoordinates,
   SVGCoordinates,
   PlanarCoordinates,
@@ -15,6 +17,7 @@ import {
   Surface,
 } from '$lib/core';
 import { Numeral } from '$lib/numeral';
+import type { FixMe } from '$lib/types/fixme';
 
 export type DrawingStoreState = {
   items: Array<Drawing>;
@@ -47,7 +50,7 @@ export const DrawingStore = {
 
     HistoryStore.createMutation<[Drawing['id']], {
       drawingSurfaceToSurfaceId?: { [drawingSurfaceId: string]: Surface['id'] },
-      drawingSurfaceToFoldIds?: { [drawingSurfaceId: string]: { [foldIndex: number]: LinearFold['id']} },
+      drawingSurfaceToFoldIds?: { [drawingSurfaceId: string]: { [foldSelector: string]: LinearFold['id']} },
       previousSurfaceValues?: { [surfaceId: string]: Surface | null },
       previousDrawingSurfaceToSurfaceMapping?: {[drawingSurfaceId: string]: Partial<DrawingSurface>},
     }>({
@@ -98,7 +101,7 @@ export const DrawingStore = {
           const foldSets = drawingSurface.foldSets.map(foldSet => {
             const folds = foldSet.folds.map(({foldId, geometry}) => {
               if (!geometry) {
-                return { foldId, geometry };
+                throw new Error(`Fold ${foldId} geometry is undefined!`);
               }
 
               // Figure out the endpoints of the fold
@@ -120,42 +123,46 @@ export const DrawingStore = {
                   break;
 
                 default:
-                  return { foldId, geometry };
+                  throw new Error(`Cannot get fold endpoints, unknown fold geometry ${(geometry as FixMe).type}!`);
               }
+              console.log('Fold endpoints:', a, b);
 
               // Then find the fold to attach the endpoints to
               let fold: LinearFold;
-              if (foldId) {
-                // Try to find an existing fold if one was specified
-                const foundFold = SurfaceStore.getFold(surfaceStoreValue, foldId);
-                if (!foundFold) {
-                  return { foldId, geometry };
-                }
+              const foundFold = SurfaceStore.getFold(surfaceStoreValue, foldId || '');
+              if (foundFold) {
+                // Update fold to attach new endpoints
                 fold = { ...foundFold, a, b };
               } else {
                 // Or fall back to creating a new fold
                 fold = LinearFold.create(a, b);
+                console.log('Creating new fold:', a, b);
               }
 
+              // And finally assign the correct id to the fold so that fold ids are predicatable
+              if (!context.drawingSurfaceToFoldIds) {
+                throw new Error(`context.drawingSurfaceToFoldIds is not defined, this should be impossible!`);
+              }
+              if (!context.drawingSurfaceToFoldIds[drawingSurface.id]) {
+                context.drawingSurfaceToFoldIds[drawingSurface.id] = {};
+              }
+              const selector = DrawingSurfaceFoldSet.getMoreSpecificSelectorForFold(
+                foldSet,
+                drawing.media,
+                geometry,
+              );
+              const correctFoldId = context.drawingSurfaceToFoldIds[drawingSurface.id][selector];
+              console.log('Selector:', selector, 'Correct Fold Id:', correctFoldId);
+              if (correctFoldId) {
+                fold = { ...fold, id: correctFoldId };
+              } else {
+                context.drawingSurfaceToFoldIds[drawingSurface.id][selector] = fold.id;
+              }
               linearFolds.push(fold);
+
               return { foldId: fold.id, geometry };
             });
             return { ...foldSet, folds };
-          });
-          linearFolds = linearFolds.map((f, i) => {
-            if (!context.drawingSurfaceToFoldIds) {
-              throw new Error(`context.drawingSurfaceToFoldIds is not defined, this should be impossible!`);
-            }
-            if (!context.drawingSurfaceToFoldIds[drawingSurface.id]) {
-              context.drawingSurfaceToFoldIds[drawingSurface.id] = {};
-            }
-            const foldId = context.drawingSurfaceToFoldIds[drawingSurface.id][i];
-            if (foldId) {
-              f = { ...f, id: foldId };
-            } else {
-              context.drawingSurfaceToFoldIds[drawingSurface.id][i] = f.id;
-            }
-            return f;
           });
           console.log('FOLDS', foldSets, linearFolds);
 
@@ -232,8 +239,10 @@ export const DrawingStore = {
         // Revert surfaces
         for (const [surfaceId, value] of Object.entries(context.previousSurfaceValues)) {
           if (value === null) {
+            console.log('Remove surface', surfaceId);
             surfaceStoreValue = SurfaceStore.removeItem(surfaceStoreValue, surfaceId);
           } else {
+            console.log('Update surface', surfaceId, 'to', value);
             surfaceStoreValue = SurfaceStore.updateItem(surfaceStoreValue, surfaceId, () => value);
           }
         }

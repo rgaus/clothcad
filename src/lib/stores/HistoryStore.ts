@@ -92,29 +92,31 @@ export const HistoryStore = {
           context,
           updatedAt: new Date().toISOString(),
         };
+        console.groupCollapsed('%cMUTATION', 'font-weight:bold;background-color:green;padding:2px;', historyItem.name);
+        console.log('History Item:', historyItem);
+        console.log('History Stack:', value.history);
 
         const initialStoreValues = getInitialStoreValues();
-        console.log('STORE VALUES', initialStoreValues);
+        console.log('Initial Store Values:', initialStoreValues);
         let storeValues = initialStoreValues;
 
         // Requirements allow a mutation to define what must be newly created before the mutation
         // can run
-        // const requirements = historyItem.requireFreshlyCreated ? historyItem.requireFreshlyCreated(historyItem.args, historyItem.context) : [];
         const requirements = historyItem.requires ? historyItem.requires(historyItem.args, historyItem.context) : [];
         let historyIndexSteppedBackwardsTo = value.currentHistoryIndex + 1;
-        console.log('>', requirements);
+        console.groupCollapsed('%cRequirements:', 'font-weight:bold;background-color:red;padding:2px;', requirements);
         if (requirements.length > 0) {
+          console.log('Requirments found, finding index to place item...');
           let previousStoreValues = storeValues;
 
-          // Figure out the initial state of all requirements
-          const provides = historyItem.provides ? historyItem.provides(historyItem.args, historyItem.context) : [];
-          let metRequirements: Array<boolean> = requirements.map(() => false);
-          console.log('INITIAL PROVIDES', provides, 'REQS', requirements, 'RESULTS:', metRequirements);
+          // Mark all requirements as initially unmet.
+          let metRequirements = requirements.map(() => false);
 
           // Go backwards until the requirements are all met
+          console.groupCollapsed('Start working backwards to find item meeting requirements:');
           for (let index = value.currentHistoryIndex; index >= 0; index -= 1) {
             const historyItem = value.history[index];
-            console.log('AT INDEX', index, historyItem.name);
+            console.log('At history item index:', index, historyItem);
 
             previousStoreValues = storeValues;
             storeValues = historyItem.backwards(storeValues, historyItem.args, historyItem.context);
@@ -129,7 +131,7 @@ export const HistoryStore = {
                 metRequirements[i] = true;
               }
             }
-            console.log('REQS STATE', requirements, metRequirements);
+            console.log('\tRequirements state:', metRequirements);
 
             if (metRequirements.every(i => i === true)) {
               // Ok! We're finally done going back
@@ -138,33 +140,46 @@ export const HistoryStore = {
               // Also update a few variables that are set to their "next" values to reset them to
               // the previous values
               historyIndexSteppedBackwardsTo = index + 1;
+              console.log(`Met all requirements, moving back to last item (last item at index: ${historyIndexSteppedBackwardsTo})`)
               break;
             }
           }
+          console.groupEnd();
+        } else {
+          console.log('No requirements found!');
         }
-        // console.log('NOW AT', value, historyIndexSteppedBackwardsTo);
-        console.log('NOW AT', storeValues);
+        console.log('After applying requirements:');
+        console.log('\tCurrent Index:', historyIndexSteppedBackwardsTo);
+        console.log('\tHistoryStore Values:', value);
+        console.log('\tStore Values:', storeValues);
+        console.groupEnd();
 
         // Migrate the state forwards with the current history item
+        console.groupCollapsed('%cApply history item:', 'font-weight:bold;background-color:red;padding:2px;');
+        console.log('Store Values (before) :', storeValues);
         storeValues = historyItem.forwards(storeValues, historyItem.args, historyItem.context);
         if (typeof storeValues === 'undefined') {
           throw new Error("`undefined` was returned from mutation forwards function, this isn't allowed!");
         }
+        console.log('Store Values (after) :', storeValues);
+        console.groupEnd();
 
         const newCurrentHistoryIndex = value.currentHistoryIndex + 1;
 
         // If there were requirements, now step forward again to reapply history that was previously
         // inverted
         if (requirements.length > 0) {
+          console.groupCollapsed('Replaying all old history on top of new history item...');
           for (
             let index = historyIndexSteppedBackwardsTo;
             index < newCurrentHistoryIndex;
             index += 1
           ) {
             const historyItem = value.history[index];
+            console.log('At history item index:', index, historyItem);
             storeValues = historyItem.forwards(storeValues, historyItem.args, historyItem.context);
-            console.log('AT INDEX', index, historyItem.name, storeValues);
           }
+          console.groupEnd();
         }
 
         // Insert the new history item in the right place
@@ -173,7 +188,7 @@ export const HistoryStore = {
           (historyItem as unknown) as HistoryListItem,
           ...value.history.slice(historyIndexSteppedBackwardsTo),
         ];
-        console.log('NEW HISORY', newHistory);
+        console.log('New history stack:', newHistory);
         const newHistoryValue = {
           ...value,
           history: newHistory,
@@ -182,10 +197,13 @@ export const HistoryStore = {
           // When creating new mutatations, erase the undo stack
           undoneHistoryItems: [],
         };
+        console.log('New history store value:', newHistoryValue);
 
         // Update all stores with the latest state
+        console.log('Final Store Values:', storeValues);
         updateStoreValues(initialStoreValues, storeValues);
 
+        console.groupEnd();
         return newHistoryValue;
       });
     };
@@ -211,6 +229,7 @@ export const HistoryStore = {
       return [ value, initialStoreValues ];
     }
 
+    console.groupCollapsed('%cGO', 'font-weight:bold;background-color:blue;padding:2px;', amount);
     const movingForwards = amount > 0;
 
     let startIndex = Math.max(Math.min(value.currentHistoryIndex, value.history.length-1), 0);
@@ -219,10 +238,11 @@ export const HistoryStore = {
     if (movingForwards) {
       startIndex += 1;
     }
-
-    // console.log('INDEXES', startIndex, endIndex);
+    console.log('Start Index:', startIndex);
+    console.log('End Index:', endIndex);
 
     let storeValues = initialStoreValues;
+    console.log('Initial Store Values:', storeValues);
 
     for (
       let index = startIndex;
@@ -231,22 +251,26 @@ export const HistoryStore = {
     ) {
       const historyItem = value.history[index];
       if (movingForwards) {
-        // console.log('RUNNING FORWARDS', index);
+        console.groupCollapsed('Running forwards:', index, historyItem);
         storeValues = historyItem.forwards(storeValues, historyItem.args, historyItem.context);
         if (!value) {
           throw new Error("`undefined` was returned from mutation forwards function, this isn't allowed!");
         }
+        console.groupEnd();
       } else {
-        // console.log('RUNNING BACKWARDS', index);
+        console.groupCollapsed('Running backwards:', index, historyItem);
         storeValues = historyItem.backwards(storeValues, historyItem.args, historyItem.context);
         if (!value) {
           throw new Error("`undefined` was returned from mutation backwards function, this isn't allowed!");
         }
+        console.groupEnd();
       }
     }
 
     value = { ...value, currentHistoryIndex: endIndex };
-    // console.log('END VALUE', value);
+    console.log('Final History:', value);
+    console.log('Final Store Values:', storeValues);
+    console.groupEnd();
     return [value, storeValues];
   },
 
