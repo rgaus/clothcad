@@ -15,6 +15,17 @@ export const Red8 = '#a8071a';
 export const Red9 = '#820014';
 export const Red10 = '#5c0011';
 
+export const Green1 = '#f6ffed';
+export const Green2 = '#d9f7be';
+export const Green3 = '#b7eb8f';
+export const Green4 = '#95de64';
+export const Green5 = '#73d13d';
+export const Green6 = '#52c41a';
+export const Green7 = '#389e0d';
+export const Green8 = '#237804';
+export const Green9 = '#135200';
+export const Green10 = '#092b00';
+
 export const Cyan1 = '#e6fffb';
 export const Cyan2 = '#b5f5ec';
 export const Cyan3 = '#87e8de';

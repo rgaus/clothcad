@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { COLORS } from '$lib/color';
+  import { Red4, Green4, Cyan4, COLORS } from '$lib/color';
 
   import { SurfaceStore, DrawingStore, HistoryStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
   import type { HistoryListItem } from '$lib/stores/HistoryStore';
@@ -17,6 +17,7 @@
   let activeTab: TabItem = 'drawing';
 
   let focusedHistoryItemId: HistoryListItem['id'] | null = null;
+  let highlightedHistoryItemId: HistoryListItem['id'] | null = null;
   let focusedHistoryItemName = '';
 
   FocusedItemStore.subscribe(focusedItem => {
@@ -114,7 +115,7 @@
     margin-left: calc(-1 * (var(--activeline-width) / 2));
     margin-top: calc(-1 * var(--border-radius-2));
     width: var(--activeline-width);
-    background-color: var(--cyan-8);
+    background-color: var(--cyan-4);
     z-index: 999;
     border-top-left-radius: var(--border-radius-2);
     border-top-right-radius: var(--border-radius-2);
@@ -175,23 +176,6 @@
     color: var(--gray-8);
   }
 
-  .lineset {
-    display: flex;
-    width: var(--space-8);
-    height: var(--space-8);
-    background-color: var(--gray-6);
-    padding-left: var(--space-1);
-    flex-grow: 0;
-    flex-shrink: 0;
-  }
-  .line {
-    width: 1px;
-    height: 100%;
-    flex-grow: 0;
-    flex-shrink: 0;
-    margin-right: var(--space-1);
-  }
-
   .currentItemMarker {
     position: absolute;
     bottom: calc(-1 * var(--space-1));
@@ -204,6 +188,18 @@
     z-index: 9999;
   }
 
+  .providesRequiresBox {
+    background-color: var(--gray-7);
+    width: var(--space-8);
+    height: var(--space-8);
+    border-radius: var(--border-radius-2);
+    overflow: hidden;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .label {
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -212,7 +208,7 @@
     flex-grow: 1;
     flex-shrink: 1;
   }
-  .label:first-child { padding-left: var(--space-1); }
+  .label:first-child { padding-left: var(--space-3); }
   .label:last-child { padding-right: var(--space-1); }
 </style>
 
@@ -418,13 +414,25 @@
             class="item"
             class:focused={$HistoryStore.currentHistoryIndex === index}
             on:click={() => HistoryStore.to(index)}
+            on:mouseenter={() => { highlightedHistoryItemId = historyItem.id; }}
+            on:mouseleave={() => { highlightedHistoryItemId = null; }}
           >
-            {#if $HistoryStore.currentHistoryIndex === index}
-              <div class="currentItemMarker" />
-            {/if}
-            <div class="lineset">
-              <div class="line" style:background-color="red" />
-              <div class="line" style:background-color="green" />
+            <div class="providesRequiresBox">
+              {#if historyItem.provides}
+                {#each historyItem.provides(historyItem.args, historyItem.context) as provide}
+                  <span style:color={{create: Green4, update: Cyan4, delete: Red4}[provide.operation]}>
+                  {{
+                    'drawing': 'd',
+                    'drawing-surface': 's',
+                    'drawing-surface-fold-set': 'e',
+                    'surface': 'S',
+                    'fold': 'F',
+                  }[provide.item.itemType]}
+                  </span>
+                {/each}
+              {:else}
+                &mdash;
+              {/if}
             </div>
             <div class="label">
               {#if historyItem.id === focusedHistoryItemId}
@@ -447,6 +455,9 @@
                 {historyItem.name}
               {/if}
             </div>
+            {#if $HistoryStore.currentHistoryIndex === index}
+              <div class="currentItemMarker" />
+            {/if}
             <Button
               text="Edit"
               on:click={() => {
