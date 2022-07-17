@@ -807,14 +807,21 @@
               d={`
                 M${drawingGeometryWithMetadata.segments[0][0].x},${drawingGeometryWithMetadata.segments[0][0].y}
                 ${drawingGeometryWithMetadata.segments.map(segment => `L${segment[1].x},${segment[1].y}`).join(' ')}
+                L${drawingGeometryWithMetadata.segments[0][0].x}, ${drawingGeometryWithMetadata.segments[0][0].y}
               `}
+              fill={{
+                "none": Gray1,
+                "focused-drawing-surface": Cyan2,
+                "focused-fold": "transparent", // This is an impossible case
+                "muted": "rgba(31, 31, 31, 0.1)", // FIXME: this is "Gray10" with 10% opacity
+              }[drawingGeometryWithMetadata.mode]}
               stroke={{
                 "none": Gray10,
                 "focused-drawing-surface": "", // This is an impossible case
                 "focused-fold": Red4,
                 "muted": "rgba(31, 31, 31, 0.5)", // FIXME: this is "Gray10" with 50% opacity
               }[drawingGeometryWithMetadata.mode]}
-              stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `${2 / viewport.zoom}px` : ""}
+              stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `1px` : ""}
               stroke-width={2 / viewport.zoom}
             />
             {#if drawingGeometryWithMetadata.selector}
@@ -838,7 +845,7 @@
                 "focused-fold": Red4,
                 "muted": "rgba(31, 31, 31, 0.5)", // FIXME: this is "Gray10" with 50% opacity
               }[drawingGeometryWithMetadata.mode]}
-              stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `${2 / viewport.zoom}px` : ""}
+              stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `1px` : ""}
               stroke-width={2 / viewport.zoom}
             />
             {#if drawingGeometryWithMetadata.selector}
