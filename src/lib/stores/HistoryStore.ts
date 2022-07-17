@@ -51,9 +51,6 @@ export type HistoryListItem<A = Array<any>, C = object> = {
 
   provides?: (args: A, context: C) => Array<CreatedItem | UpdatedItem | DeletedItem>;
   requires?: (args: A, context: C) => Array<CreatedItem | UpdatedItem | DeletedItem>;
-
-  // requireExists?: (args: Array<any>, context: SurfaceHistoryContext) => Array<Item>;
-  requireFreshlyCreated?: (args: A, context: C) => Array<Item>;
 };
 
 export type HistoryStoreState = {

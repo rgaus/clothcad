@@ -12,7 +12,7 @@
   import FocusedSurfacePanel from '../components/FocusedSurfacePanel.svelte';
   import FocusedFoldPanel from '../components/FocusedFoldPanel.svelte';
   import Viewport from '../components/Viewport.svelte';
-  import DrawingEditViewport from '../components/DrawingEditViewport.svelte';
+  import DrawingEdit from '../components/drawing-edit/DrawingEdit.svelte';
 
   import { HistoryStore, DrawingStore, SurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
 
@@ -129,7 +129,7 @@
         </svelte:fragment>
       </AppBar>
 
-      <DrawingEditViewport />
+      <DrawingEdit />
     {/if}
   </svelte:fragment>
 </Layout>
