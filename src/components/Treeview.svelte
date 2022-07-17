@@ -4,7 +4,7 @@
   import { SurfaceStore, DrawingStore, HistoryStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
   import type { HistoryListItem } from '$lib/stores/HistoryStore';
 
-  import { Drawing } from '$lib/core';
+  import { Drawing, DEFAULT_DRAWING_SCALE, DEFAULT_DRAWING_THICKNESS } from '$lib/core';
 
   import Panel from './ui/Panel.svelte';
   import TextField from './ui/TextField.svelte';
@@ -84,7 +84,8 @@
 
               media: {
                 type: 'svg/literal',
-                scale: LiteralNumeral.create(1),
+                scale: DEFAULT_DRAWING_SCALE,
+                thickness: DEFAULT_DRAWING_THICKNESS,
                 contents,
                 document: svgDoc,
               },

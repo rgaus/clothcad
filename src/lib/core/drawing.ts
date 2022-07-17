@@ -8,6 +8,9 @@ import { LiteralNumeral } from '$lib/numeral';
 
 export const DEFAULT_DRAWING_GEOMETRY_TRANSFORM = new Matrix3().identity();
 
+export const DEFAULT_DRAWING_SCALE = LiteralNumeral.create(1);
+export const DEFAULT_DRAWING_THICKNESS = LiteralNumeral.create(0.1);
+
 export type DrawingGeometry = DrawingGeometryPath | DrawingGeometryLine | DrawingGeometryRect;
 export const DrawingGeometry = {
   create(element: Element, transform: Matrix3 = DEFAULT_DRAWING_GEOMETRY_TRANSFORM): DrawingGeometry | null {
@@ -182,6 +185,7 @@ export type Drawing = {
   media: {
     type: 'svg/literal';
     scale: Numeral;
+    thickness: Numeral;
     contents: string;
     document: Document;
   },
@@ -214,7 +218,8 @@ export const Drawing = {
 
       media: {
         type: 'svg/literal',
-        scale: LiteralNumeral.create(1),
+        scale: DEFAULT_DRAWING_SCALE,
+        thickness: DEFAULT_DRAWING_THICKNESS,
         contents: svgContents,
         document: svgDoc,
       },

@@ -31,6 +31,12 @@ export const Numeral = {
         return NaN;
     }
   },
+  isSingular(numeral: Numeral) {
+    return Numeral.toNumber(numeral) === 1;
+  },
+  equal(a: Numeral, b: Numeral): boolean {
+    return Numeral.serializeToString(a) === Numeral.serializeToString(b);
+  },
 };
 
 export type LiteralNumeral = {

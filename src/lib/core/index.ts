@@ -15,6 +15,8 @@ export {
   DrawingSurface,
   DrawingSurfaceFoldSet,
   DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
+  DEFAULT_DRAWING_SCALE,
+  DEFAULT_DRAWING_THICKNESS,
 } from './drawing';
 export { 
   radiansToDegrees,
