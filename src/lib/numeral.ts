@@ -34,7 +34,13 @@ export const Numeral = {
   isSingular(numeral: Numeral) {
     return Numeral.toNumber(numeral) === 1;
   },
-  equal(a: Numeral, b: Numeral): boolean {
+  equal(a: Numeral | null, b: Numeral | null): boolean {
+    if (a === null && b === null) {
+      return true;
+    }
+    if (a === null || b === null) {
+      return false;
+    }
     return Numeral.serializeToString(a) === Numeral.serializeToString(b);
   },
 };

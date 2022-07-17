@@ -384,6 +384,55 @@
       ],
     })($EditingDrawingStore.id, newScale);
   }
+
+  function updateThickness(newThickness: Numeral) {
+    if (!$EditingDrawingStore) {
+      return;
+    }
+    if (Numeral.equal(newThickness, $EditingDrawingStore.media.thickness)) {
+      return;
+    }
+
+    HistoryStore.createMutation<[Drawing['id'], Drawing['media']['thickness']], { previousThickness?: Drawing['media']['thickness'] }>({
+      name: `Change drawing thickness to ${Numeral.serializeToString(newThickness)}`,
+
+      forwards: (storeValues, [drawingId, thickness], context) => {
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          context.previousThickness = drawing.media.thickness;
+
+          const newDrawing = {
+            ...drawing,
+            media: { ...drawing.media, thickness },
+          };
+
+          return newDrawing;
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+
+      backwards: (storeValues, [drawingId, _thickness], context) => {
+        const value = DrawingStore.updateItem(storeValues.DrawingStore, drawingId, drawing => {
+          if (!context.previousThickness) {
+            throw new Error('context.previousThickness was not set, cannot run backwards function!');
+          }
+
+          const newDrawing = {
+            ...drawing,
+            media: { ...drawing.media, thickness: context.previousThickness },
+          };
+          return newDrawing;
+        });
+        return { ...storeValues, DrawingStore: value };
+      },
+
+      provides: (args) => [
+        {operation: 'update', item: {itemType: 'drawing', itemId: args[0]}},
+      ],
+      requires: (args) => [
+        {operation: 'update', item: {itemType: 'drawing', itemId: args[0]}},
+      ],
+    })($EditingDrawingStore.id, newThickness);
+  }
 </script>
 
 <style>
@@ -587,11 +636,12 @@
           value={focusedDrawingThickness}
           placeholder="eg: 1"
           on:change={e => {
-            const newScale = e.detail;
-            if (!newScale) {
+            const newThickness = e.detail;
+            if (!newThickness) {
               return;
             }
 
+            updateThickness(newThickness);
           }}
           unit={focusedDrawingThickness && Numeral.isSingular(focusedDrawingThickness) ? "unit" : "units"}
           width="150px"

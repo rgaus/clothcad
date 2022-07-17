@@ -92,6 +92,7 @@ export const DrawingStore = {
                 drawingSurface.geometry.origin.y * scale,
                 0,
               ),
+              thickness: drawing.media.thickness,
             },
           );
           console.log('FACE', face);

@@ -11,7 +11,6 @@
   import Button from './ui/Button.svelte';
 
   import type { FixMe } from '$lib/types/fixme';
-  import { LiteralNumeral } from '$lib/numeral';
 
   type TabItem = 'drawing' | 'surface' | 'fold' | 'history';
 

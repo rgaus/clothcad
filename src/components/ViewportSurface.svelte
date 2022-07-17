@@ -5,6 +5,7 @@
   import { Cyan7, COLORS, toRawHex } from '$lib/color';
   import { HighlightedItemStore } from '$lib/stores';
   import { Item } from '$lib/types/item';
+  import { Numeral } from '$lib/numeral';
   import {
     Mesh,
     MeshLambertMaterial,
@@ -68,7 +69,7 @@
 
     const shape = path.toShapes(true);
     const shape3d = new ExtrudeGeometry(shape, {
-      depth: -0.1,
+      depth: -1 * Numeral.toNumber(surface.face.thickness),
       bevelEnabled: false
     });
     mesh = new Mesh(shape3d, material);
@@ -131,7 +132,12 @@
     quaternion.setFromRotationMatrix(surface.face.matrix);
     mesh.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
-    mesh.position.set(surface.face.origin.x, surface.face.origin.y, surface.face.origin.z);
+    const thickness = Numeral.toNumber(surface.face.thickness);
+    mesh.position.set(
+      surface.face.origin.x,
+      surface.face.origin.y,
+      surface.face.origin.z + (thickness / 2),
+    );
 
     mesh.visible = surface.visible;
 

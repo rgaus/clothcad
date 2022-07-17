@@ -16,17 +16,21 @@ import { distanceToPolygon } from '$lib/distance-to-polygon';
 
 import type { PlanarFace as PlanarFaceDefinition } from './definition';
 import type { FixMe } from '$lib/types/fixme';
+import { Numeral, LiteralNumeral } from '$lib/numeral';
 
 type PlanarFaceCreateRectangleOptions = {
   pitchInDegrees: number,
   yawInDegrees: number,
   rollInDegrees: number,
   translation: SpacialCoordinates,
+  thickness: Numeral;
 };
 
 const PLANAR_FACE_DEFAULT_REFERENCE_POINT_X = SpacialCoordinates.createFromVector3((new Vector3(1, 0, 0)).normalize());
 const PLANAR_FACE_DEFAULT_REFERENCE_POINT_Y = SpacialCoordinates.createFromVector3((new Vector3(0, 1, 0)).normalize());
 const PLANAR_FACE_DEFAULT_REFERENCE_POINT_Z = SpacialCoordinates.createFromVector3((new Vector3(0, 0, 1)).normalize());
+
+const PLANAR_FACE_DEFAULT_THICKNESS = LiteralNumeral.create(0.1);
 
 function computeFaceOrigin(points: Array<SpacialCoordinates>) {
   // Get the point closest to (0, 0, 0) and call that the origin
@@ -53,11 +57,12 @@ export const PlanarFace = {
     referencePointY: SpacialCoordinates,
     referencePointZ: SpacialCoordinates,
     matrix: Matrix4,
+    thickness: Numeral = PLANAR_FACE_DEFAULT_THICKNESS,
   ): PlanarFace {
     if (points.length < 3) {
       throw new Error(`PlanarFace: point length must be at least three, only received ${points.length}`);
     }
-    return { type: 'planar-face', points, origin, referencePointX, referencePointY, referencePointZ, matrix };
+    return { type: 'planar-face', points, origin, referencePointX, referencePointY, referencePointZ, matrix, thickness};
   },
 
   createRectangle(width: number, height: number, opts?: Partial<PlanarFaceCreateRectangleOptions>): PlanarFace {
@@ -66,6 +71,7 @@ export const PlanarFace = {
       pitchInDegrees: opts?.pitchInDegrees || 0,
       yawInDegrees: opts?.yawInDegrees || 0,
       rollInDegrees: opts?.rollInDegrees || 0,
+      thickness: opts?.thickness || PLANAR_FACE_DEFAULT_THICKNESS,
     };
 
     const pitch = degreesToRadians(options.pitchInDegrees),
@@ -103,6 +109,7 @@ export const PlanarFace = {
       SpacialCoordinates.createFromVector3(referencePointVectorY),
       SpacialCoordinates.createFromVector3(referencePointVectorZ),
       matrix,
+      options.thickness,
     );
   },
 
@@ -161,6 +168,7 @@ export const PlanarFace = {
       referencePointY,
       referencePointZ,
       newMatrix,
+      face.thickness,
     );
 
     // Now, translate the rotated face so that line[0] in the old face is in the same place in the
@@ -208,6 +216,7 @@ export const PlanarFace = {
       newFace.referencePointY,
       newFace.referencePointZ,
       newFace.matrix,
+      newFace.thickness,
     );
   },
 
@@ -437,8 +446,24 @@ export const PlanarFace = {
     const rightOrigin = computeFaceOrigin(rightPointsSpacial);
 
     return [
-      PlanarFace.create(leftPointsSpacial, leftOrigin, face.referencePointX, face.referencePointY, face.referencePointZ, face.matrix),
-      PlanarFace.create(rightPointsSpacial, rightOrigin, face.referencePointX, face.referencePointY, face.referencePointZ, face.matrix),
+      PlanarFace.create(
+        leftPointsSpacial,
+        leftOrigin,
+        face.referencePointX,
+        face.referencePointY,
+        face.referencePointZ,
+        face.matrix,
+        face.thickness,
+      ),
+      PlanarFace.create(
+        rightPointsSpacial,
+        rightOrigin,
+        face.referencePointX,
+        face.referencePointY,
+        face.referencePointZ,
+        face.matrix,
+        face.thickness,
+      ),
     ];
   },
 };
