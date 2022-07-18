@@ -1,4 +1,4 @@
-import { derived } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 
 import { FocusedItemStore } from './FocusedItemStore';
 import { SurfaceStore } from './SurfaceStore';
@@ -18,6 +18,7 @@ import {
 } from '$lib/core';
 import { Numeral } from '$lib/numeral';
 import type { FixMe } from '$lib/types/fixme';
+import type { Item } from '$lib/types/item';
 
 export type DrawingStoreState = {
   items: Array<Drawing>;
@@ -330,5 +331,19 @@ export const EditingDrawingStore = derived<
   }
 
   set(DrawingStore.get($DrawingStore, editing.id));
+  return;
+}, null);
+
+export const FocusedDrawingSurfaceIdStore = writable<DrawingSurface['id'] | null>(null);
+export const FocusedDrawingSurfaceStore = derived<
+  [typeof EditingDrawingStore, typeof FocusedDrawingSurfaceIdStore],
+  DrawingSurface | null
+>([EditingDrawingStore, FocusedDrawingSurfaceIdStore], ([$EditingDrawingStore, $FocusedDrawingSurfaceIdStore], set) => {
+  if (!$FocusedDrawingSurfaceIdStore) {
+    set(null);
+    return;
+  }
+
+  set($EditingDrawingStore?.surfaces.find(s => s.id === $FocusedDrawingSurfaceIdStore) || null)
   return;
 }, null);

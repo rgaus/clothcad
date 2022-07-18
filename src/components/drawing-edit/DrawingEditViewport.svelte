@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Matrix3 } from 'three';
-  import { EditingDrawingStore } from '$lib/stores';
+  import { EditingDrawingStore, FocusedDrawingSurfaceStore } from '$lib/stores';
   import {
     DrawingGeometry,
     DrawingSurface,
@@ -12,10 +12,6 @@
   import { Cyan2, Red4, Cyan7, Gray1, Gray10 } from '$lib/color';
 
   import DrawingEditViewportSVGLabel from './DrawingEditViewportSVGLabel.svelte';
-
-  let focusedDrawingSurfaceId: DrawingSurface['id'] | null = null;
-  let focusedDrawingSurface: DrawingSurface | null = null;
-  $: focusedDrawingSurface = $EditingDrawingStore?.surfaces.find(s => s.id === focusedDrawingSurfaceId) || null;
 
   // Get a flat list of all geometries within a svg
   type DrawingGeometryWithMetadata = DrawingGeometry & {
@@ -195,7 +191,7 @@
       }}
     >
       <g transform={`scale(${viewport.zoom}) translate(${-1 * viewport.left}, ${-1 * viewport.top})`}>
-        {#each getDrawingGeometries($EditingDrawingStore.media.document, focusedDrawingSurface) as drawingGeometryWithMetadata}
+        {#each getDrawingGeometries($EditingDrawingStore.media.document, $FocusedDrawingSurfaceStore) as drawingGeometryWithMetadata}
           {#if drawingGeometryWithMetadata.type == "rect"}
             <rect
               x={drawingGeometryWithMetadata.origin.x}

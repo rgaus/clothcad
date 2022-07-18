@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DrawingStore, EditingDrawingStore, HistoryStore } from '$lib/stores';
+  import { DrawingStore, EditingDrawingStore, FocusedDrawingSurfaceIdStore, FocusedDrawingSurfaceStore, HistoryStore } from '$lib/stores';
   import {
     Drawing,
     DrawingGeometry,
@@ -23,26 +23,18 @@
     focusedDrawingThickness = editingDrawing?.media.thickness || null;
   });
 
-  let focusedDrawingSurfaceId: DrawingSurface['id'] | null = null;
-  let focusedDrawingSurface: DrawingSurface | null = null;
-  $: focusedDrawingSurface = $EditingDrawingStore?.surfaces.find(s => s.id === focusedDrawingSurfaceId) || null;
-
   // When focused drawingsurface changes, update derived values
-  let oldFocusedDrawingSurface: DrawingSurface | null = null;
   let focusedDrawingSurfaceSelector = '';
   let foldSetSelectors: { [foldSetId: string]: string } = {};
-  $: {
-    if (oldFocusedDrawingSurface !== focusedDrawingSurface) {
-      if (focusedDrawingSurface) {
-        focusedDrawingSurfaceSelector = focusedDrawingSurface.geometrySelector || '';
-        foldSetSelectors = Object.fromEntries(focusedDrawingSurface.foldSets.map(i => [i.id, i.geometrySelector]));
-      } else {
-        focusedDrawingSurfaceSelector = '';
-        foldSetSelectors = {};
-      }
-      oldFocusedDrawingSurface = focusedDrawingSurface;
+  FocusedDrawingSurfaceStore.subscribe(focusedDrawingSurface => {
+    if (focusedDrawingSurface) {
+      focusedDrawingSurfaceSelector = focusedDrawingSurface.geometrySelector || '';
+      foldSetSelectors = Object.fromEntries(focusedDrawingSurface.foldSets.map(i => [i.id, i.geometrySelector]));
+    } else {
+      focusedDrawingSurfaceSelector = '';
+      foldSetSelectors = {};
     }
-  }
+  });
 
   // When focusedDrawingSurfaceSelector changes, try to reresolve it in the svg document
   let focusedDrawingSurfaceSelectorResult = findInSVG(focusedDrawingSurfaceSelector, $EditingDrawingStore);
@@ -60,8 +52,8 @@
       return;
     }
 
-    if (!focusedDrawingSurface) {
-      throw new Error(`Drawing surface ${focusedDrawingSurfaceId} cannot be found!`);
+    if (!$FocusedDrawingSurfaceStore) {
+      throw new Error(`Focused drawing surface cannot be found!`);
     }
 
     HistoryStore.createMutation<[Drawing['id'], DrawingSurface['id']], { foldSetId: DrawingSurfaceFoldSet['id'] }>({
@@ -111,7 +103,7 @@
         {operation: 'create', item: {itemType: 'drawing-surface-fold-set', itemId: context.foldSetId}},
         {operation: 'update', item: {itemType: 'drawing-surface-fold-set', itemId: context.foldSetId}},
       ] : [],
-    })($EditingDrawingStore.id, focusedDrawingSurface.id);
+    })($EditingDrawingStore.id, $FocusedDrawingSurfaceStore.id);
   }
 
   function newSubregion() {
@@ -119,7 +111,9 @@
       return;
     }
 
-    const mutation = HistoryStore.createMutation<[Drawing['id']], { drawingSurfaceId: DrawingSurface['id'] }>({
+    let newDrawingSurfaceId: DrawingSurface['id'] | null = null;
+
+    HistoryStore.createMutation<[Drawing['id']], { drawingSurfaceId: DrawingSurface['id'] }>({
       name: `Create drawing surface`,
       forwards: (storeValues, [drawingId], context) => {
         const drawingSurface = DrawingSurface.create({
@@ -128,6 +122,7 @@
           geometry: null,
           foldSets: [],
         });
+        newDrawingSurfaceId = drawingSurface.id;
 
         if (context.drawingSurfaceId) {
           drawingSurface.id = context.drawingSurfaceId;
@@ -142,8 +137,6 @@
           return result;
         });
 
-        focusedDrawingSurfaceId = drawingSurface.id;
-
         return { ...storeValues, DrawingStore: newValue };
       },
       backwards: (storeValues, [drawingId], context) => {
@@ -154,7 +147,7 @@
           return Drawing.removeSurface(drawingValue, context.drawingSurfaceId);
         });
 
-        focusedDrawingSurfaceId = null;
+        FocusedDrawingSurfaceIdStore.set(null);
 
         return { ...storeValues, DrawingStore: newValue };
       },
@@ -165,15 +158,16 @@
         {operation: 'create', item: {itemType: 'drawing-surface', itemId: context.drawingSurfaceId}},
         {operation: 'update', item: {itemType: 'drawing-surface', itemId: context.drawingSurfaceId}},
       ] : [],
-    });
-    mutation($EditingDrawingStore.id);
+    })($EditingDrawingStore.id);
+
+    FocusedDrawingSurfaceIdStore.set(newDrawingSurfaceId);
   }
 
   function updateFoldSetGeometry(drawingSurfaceFoldSetId: DrawingSurfaceFoldSet['id']) {
     if (!$EditingDrawingStore) {
       return;
     }
-    if (!focusedDrawingSurface) {
+    if (!$FocusedDrawingSurfaceStore) {
       return;
     }
 
@@ -246,7 +240,7 @@
       provides: (args) => [
         {operation: 'update', item: {itemType: 'drawing-surface-fold-set', itemId: args[2]}},
       ],
-    })($EditingDrawingStore.id, focusedDrawingSurface.id, drawingSurfaceFoldSetId, foldSetSelectors[drawingSurfaceFoldSetId]);
+    })($EditingDrawingStore.id, $FocusedDrawingSurfaceStore.id, drawingSurfaceFoldSetId, foldSetSelectors[drawingSurfaceFoldSetId]);
   }
 
   function updateFocusedDrawingSurfaceSelector() {
@@ -254,12 +248,12 @@
       return;
     }
 
-    if (!focusedDrawingSurface) {
-      throw new Error(`Drawing surface ${focusedDrawingSurfaceId} cannot be found!`);
+    if (!$FocusedDrawingSurfaceStore) {
+      throw new Error('No drawing surface is currently focused!');
     }
 
     // Cache the old drawing surface value for if backwards needs to be run
-    const existingDrawingSurface = focusedDrawingSurface;
+    const existingDrawingSurface = $FocusedDrawingSurfaceStore;
 
     HistoryStore.createMutation<[Drawing['id'], DrawingSurface['id'], string]>({
       name: `Set drawing surface geometry to ${focusedDrawingSurfaceSelector}`,
@@ -332,7 +326,7 @@
       provides: (args) => [
         {operation: 'update', item: {itemType: 'drawing-surface', itemId: args[1]}},
       ],
-    })($EditingDrawingStore.id, focusedDrawingSurface.id, focusedDrawingSurfaceSelector);
+    })($EditingDrawingStore.id, $FocusedDrawingSurfaceStore.id, focusedDrawingSurfaceSelector);
   }
 
   function updateScale(newScale: Numeral) {
@@ -520,8 +514,8 @@
 
 {#if $EditingDrawingStore}
   <div class="sidebar">
-    {#if focusedDrawingSurface}
-      <AppBar back on:back={() => { focusedDrawingSurfaceId = null; }}>
+    {#if $FocusedDrawingSurfaceStore}
+      <AppBar back on:back={() => FocusedDrawingSurfaceIdStore.set(null)}>
         <span slot="title">Edit Drawing Subregion</span>
       </AppBar>
 
@@ -548,7 +542,7 @@
         Display Surface Fold Sets:
         <Button text="Add fold set" on:click={() => addFoldSet()} />
         <ul>
-          {#each focusedDrawingSurface.foldSets as drawingSurfaceFoldSet (drawingSurfaceFoldSet.id)}
+          {#each $FocusedDrawingSurfaceStore.foldSets as drawingSurfaceFoldSet (drawingSurfaceFoldSet.id)}
             <li>
               {drawingSurfaceFoldSet.id}
 
@@ -599,7 +593,7 @@
           <li
             class="sidebarSurfaceListItem"
             class:muted={!drawingSurface.geometrySelector}
-            on:click={() => { focusedDrawingSurfaceId = drawingSurface.id }}
+            on:click={() => FocusedDrawingSurfaceIdStore.set(drawingSurface.id)}
           >
             <span class="label">
               {drawingSurface.geometrySelector || drawingSurface.id}

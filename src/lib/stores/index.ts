@@ -1,5 +1,4 @@
 import { writable } from 'svelte/store';
-// import type { SvelteComponent } from 'svelte';
 
 import type { Surface, LinearFold } from '$lib/core';
 import type { Item } from '$lib/types/item';
@@ -9,7 +8,13 @@ import { SurfaceStore, FocusedSurfaceStore, FocusedFoldStore } from './SurfaceSt
 import type { SurfaceStoreState } from './SurfaceStore';
 import { FocusedItemStore } from './FocusedItemStore';
 import { HistoryStore } from './HistoryStore';
-import { DrawingStore, FocusedDrawingStore, EditingDrawingStore } from './DrawingStore';
+import {
+  DrawingStore,
+  FocusedDrawingStore,
+  EditingDrawingStore,
+  FocusedDrawingSurfaceIdStore,
+  FocusedDrawingSurfaceStore,
+} from './DrawingStore';
 
 const HighlightedItemStore = {
   ...writable<Item | null>(null),
@@ -139,6 +144,8 @@ export {
   DrawingStore,
   FocusedDrawingStore,
   EditingDrawingStore,
+  FocusedDrawingSurfaceIdStore,
+  FocusedDrawingSurfaceStore,
   HighlightedItemStore,
   FocusedItemStore,
   PickingItemStore,
