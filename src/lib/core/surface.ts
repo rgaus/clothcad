@@ -113,10 +113,28 @@ export const Surface = {
       const foldPointBOnLeft = LinearFold.isPointOnLeft(primaryFold, fold.b);
       if (foldPointAOnLeft && foldPointBOnLeft) {
         // Both on left
-        surfaceAFolds.push(fold);
+        surfaceAFolds.push(LinearFold.create(
+          PlanarCoordinates.create(
+            fold.a.x - faceAOrigin.x,
+            fold.a.y - faceAOrigin.y,
+          ),
+          PlanarCoordinates.create(
+            fold.b.x - faceAOrigin.x,
+            fold.b.y - faceAOrigin.y,
+          ),
+        ));
       } else if (!foldPointAOnLeft && !foldPointBOnLeft) {
         // Both on right
-        surfaceAFolds.push(fold);
+        surfaceBFolds.push(LinearFold.create(
+          PlanarCoordinates.create(
+            fold.a.x - faceBOrigin.x,
+            fold.a.y - faceBOrigin.y,
+          ),
+          PlanarCoordinates.create(
+            fold.b.x - faceBOrigin.x,
+            fold.b.y - faceBOrigin.y,
+          ),
+        ));
       } else {
         // Bisect fold into left and right parts, and add each part to each surface
         let intersectionPoint = PlanarFace.intersection(
