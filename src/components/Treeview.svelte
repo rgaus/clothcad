@@ -129,12 +129,12 @@
   }
 
   .wrapper {
-    position: relative;
     padding: var(--space-2);
     color: var(--gray-4);
     background-color: var(--gray-9);
     height: 100%;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
   }
 
   .tabrow {
@@ -147,6 +147,8 @@
     height: var(--space-8);
     width: calc(var(--treeview-default-width) - var(--space-6));
     user-select: none;
+    flex-grow: 0;
+    flex-shrink: 0;
   }
 
   .tab {
@@ -189,6 +191,10 @@
     list-style-type: none;
     padding: 0px;
     margin: 0px;
+    margin-left: calc(-1 * var(--space-2));
+    padding-left: var(--space-2);
+    overflow-y: auto;
+    position: relative;
   }
   .item {
     position: relative;
@@ -477,8 +483,8 @@
       </ul>
     {/if}
     {#if activeTab === "history"}
-      <div class="activeline" style:height={`calc(${$HistoryStore.currentHistoryIndex+1} * var(--space-9))`} />
       <ul class="list">
+        <div class="activeline" style:height={`calc(${$HistoryStore.currentHistoryIndex+1} * var(--space-9))`} />
         {#each $HistoryStore.history as historyItem, index (historyItem.id)}
           <li
             class="item"
