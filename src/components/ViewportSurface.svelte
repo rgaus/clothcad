@@ -165,7 +165,7 @@
     onMetadataChanged();
   }
 
-  HighlightedItemStore.subscribe(() => {
+  HighlightedItemStore.subscribe(value => {
     if (!material) {
       return;
     }
@@ -173,6 +173,16 @@
     const color = toRawHex(getSurfaceColor());
     material.color.set(color);
     material.emissive.set(color);
+
+    // Make surfaces visible that are hovered over
+    const isHighlighted = HighlightedItemStore.isHighlighted(value, "surface", surface.id);
+    if (mesh) {
+      if (isHighlighted) {
+        mesh.visible = true;
+      } else {
+        mesh.visible = surface.visible;
+      }
+    }
 
     onFoldsChanged();
   });
