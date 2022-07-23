@@ -1,4 +1,5 @@
 import { derived } from 'svelte/store';
+import fuzzy from 'fuzzy';
 
 import type { Surface, LinearFold } from '$lib/core';
 
@@ -7,10 +8,11 @@ import { createCollectionStore } from './BaseCollectionStore';
 
 export type SurfaceStoreState = {
   items: Array<Surface>;
+  search: string;
 };
 
 export const SurfaceStore = {
-  ...createCollectionStore<SurfaceStoreState>(),
+  ...createCollectionStore<SurfaceStoreState>({ items: [], search: '' }),
 
   addItem(value: SurfaceStoreState, item: Surface): SurfaceStoreState {
     return {
@@ -80,6 +82,21 @@ export const SurfaceStore = {
   },
   getSurfacesContainingFold(value: SurfaceStoreState, foldId: LinearFold['id']): Array<Surface> {
     return value.items.filter(surface => typeof surface.folds.find(fold => fold.id === foldId) !== 'undefined');
+  },
+
+  updateSearch(value: SurfaceStoreState, search: string): SurfaceStoreState {
+    return { ...value, search };
+  },
+  filterDisplayableItems(value: SurfaceStoreState): Array<Surface> {
+    const surfaces = value.items;
+    if (value.search.length === 0) {
+      return surfaces;
+    }
+
+    const results = fuzzy.filter(value.search, surfaces, {
+      extract: surface => surface.name,
+    });
+    return results.map(result => result.original);
   },
 };
 

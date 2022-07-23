@@ -187,6 +187,10 @@
     border-top-right-radius: var(--border-radius-2);
   }
 
+  .searchWrapper {
+    margin-bottom: var(--space-2);
+  }
+
   .list {
     list-style-type: none;
     padding: 0px;
@@ -357,7 +361,24 @@
     {/if}
     {#if activeTab === "surface"}
       <ul class="list">
-        {#each $SurfaceStore.items as surface (surface.id)}
+        {#if $SurfaceStore.items.length > 0}
+          <div class="searchWrapper">
+            <TextField
+              width="100%"
+              muted
+              placeholder="Search"
+              on:keyup={event => {
+                const text = event?.currentTarget?.value;
+                console.log('VALUE', text)
+                if (!text) {
+                  return;
+                }
+                SurfaceStore.update(value => SurfaceStore.updateSearch(value, text));
+              }}
+            />
+          </div>
+        {/if}
+        {#each SurfaceStore.filterDisplayableItems($SurfaceStore) as surface (surface.id)}
           <li
             class="item surface"
             class:highlighted={HighlightedItemStore.isHighlighted(
