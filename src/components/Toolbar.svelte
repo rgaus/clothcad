@@ -40,7 +40,15 @@
         {#if $SerializationStore.attachedFile}
           <Button
             size="large"
-            text={`${$SerializationStore.attachedFile.file.name}${$SerializationStore.attachedFile.saveOnReEnable ? '*' : ''}`}
+            text={(() => {
+              let name = $SerializationStore.attachedFile.file.name;
+              if ($SerializationStore.attachedFile.saveOnReEnable) {
+                name += '*';
+              } else if ($SerializationStore.attachedFile.loadOnReEnable) {
+                name += '^';
+              }
+              return name;
+            })()}
             variant={$SerializationStore?.attachedFile?.enabled ? "primary" : "default"}
             on:click={() => SerializationStore.toggleFileEnabled($SerializationStore, $HistoryStore)}
             disabled={!$SerializationStore.attachedFile}

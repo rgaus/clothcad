@@ -248,7 +248,7 @@ export const HistoryStore = {
     const movingForwards = amount > 0;
 
     let startIndex = Math.max(Math.min(value.currentHistoryIndex, value.history.length-1), 0);
-    let endIndex = Math.max(Math.min(value.currentHistoryIndex + amount, value.history.length-1), 0);
+    let endIndex = Math.max(Math.min(value.currentHistoryIndex + amount, value.history.length-1), -1);
 
     if (movingForwards) {
       startIndex += 1;

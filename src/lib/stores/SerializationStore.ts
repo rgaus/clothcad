@@ -15,6 +15,7 @@ export type SerializationStoreState = {
     lastModifiedIntervalId: number;
     syncing: boolean;
     saveOnReEnable: boolean;
+    loadOnReEnable: boolean;
   } | null;
 };
 
@@ -45,6 +46,8 @@ export const SerializationStore = {
         return;
       }
 
+      let fileChangedOnDisk = false;
+
       SerializationStore.update(value => {
         // If the file entry goes away, cancel this interval
         if (!value.attachedFile) {
@@ -52,12 +55,13 @@ export const SerializationStore = {
           return value;
         }
 
-        if (!value.attachedFile.enabled) {
+        if (value.attachedFile.lastModified === newFile.lastModified) {
           return value;
         }
 
-        if (value.attachedFile.lastModified === newFile.lastModified) {
-          return value;
+        // Only reload the file right now if the attachment is enabled
+        if (value.attachedFile.enabled) {
+          fileChangedOnDisk = true;
         }
 
         return {
@@ -66,9 +70,15 @@ export const SerializationStore = {
             ...value.attachedFile,
             lastModified: newFile.lastModified,
             file: newFile,
+            // If the attachment is disabled, load the data when it's re-enabled
+            loadOnReEnable: !value.attachedFile.enabled,
           },
         };
       });
+
+      if (fileChangedOnDisk) {
+        await SerializationStore.deserialize();
+      }
     }, 1000);
 
     SerializationStore.update(value => ({
@@ -82,6 +92,7 @@ export const SerializationStore = {
         lastModifiedIntervalId,
         syncing: false,
         saveOnReEnable: false,
+        loadOnReEnable: false,
       },
     }));
   },
@@ -115,6 +126,7 @@ export const SerializationStore = {
 
   async toggleFileEnabled(value: SerializationStoreState, historyValue: HistoryStoreState) {
     let shouldSave = false;
+    let shouldLoad = false;
     let newValue = value;
 
     SerializationStore.update(value => {
@@ -125,6 +137,7 @@ export const SerializationStore = {
       const enabled = !value.attachedFile.enabled;
 
       shouldSave = enabled && value.attachedFile.saveOnReEnable;
+      shouldLoad = enabled && value.attachedFile.loadOnReEnable;
 
       newValue = {
         ...value,
@@ -132,6 +145,7 @@ export const SerializationStore = {
           ...value.attachedFile,
           enabled,
           saveOnReEnable: false,
+          loadOnReEnable: false,
         },
       };
       return newValue;
@@ -139,6 +153,11 @@ export const SerializationStore = {
 
     if (shouldSave) {
       await SerializationStore.serialize(newValue, historyValue);
+      return;
+    }
+    if (shouldLoad) {
+      await SerializationStore.deserialize();
+      return;
     }
   },
 
@@ -223,7 +242,7 @@ export const SerializationStore = {
     }
 
     // Go back to the beginning
-    HistoryStore.to(0);
+    HistoryStore.to(-1);
 
     // Clear out the store
     HistoryStore.set({
