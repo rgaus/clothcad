@@ -249,17 +249,23 @@ export const SerializationStore = {
       history: [],
       currentHistoryIndex: -1,
       undoneHistoryItems: [],
+
+      // Put it into batch load mode so all the mutations can be applied in a definite order,
+      // without considering dependencies. It's assumed that the order of records in the file takes
+      // this into account correctly.
+      mutationBatchLoadMode: true,
     });
 
     // Apply all mutations on top
     for (const logItem of deserialized.log) {
       MUTATIONS[logItem.type](logItem.args, logItem.context);
     }
+    HistoryStore.to(deserialized.index);
 
-    // Then finally add in the extra metadata
+    // Turn off batch load mode
     HistoryStore.update(value => ({
       ...value,
-      currentHistoryIndex: deserialized.index,
+      mutationBatchLoadMode: false,
     }));
 
     // Reset syncing to false

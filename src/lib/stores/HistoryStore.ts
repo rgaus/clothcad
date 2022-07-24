@@ -67,6 +67,10 @@ export type HistoryStoreState = {
   history: Array<HistoryListItem>;
   currentHistoryIndex: number;
 
+  // When set to true, disable dependency checking when loading in mutations
+  // This is turned on when loading data in via the SerializationStore
+  mutationBatchLoadMode: boolean;
+
   // When a history item is undone, push it into this stack, and when a redo is run, pop it off
   // again
   undoneHistoryItems: Array<{
@@ -84,6 +88,7 @@ export const HistoryStore = {
   ...writable<HistoryStoreState>({
     history: [],
     currentHistoryIndex: -1,
+    mutationBatchLoadMode: false,
     undoneHistoryItems: [],
   }),
 
@@ -114,7 +119,12 @@ export const HistoryStore = {
 
         // Requirements allow a mutation to define what must be newly created before the mutation
         // can run
-        const requirements = historyItem.requires ? historyItem.requires(historyItem.args, historyItem.context) : [];
+        //
+        // NOTE: requirements are skipped when in "batch load mode" because it's assumed that
+        // the mutations being loaded in a batch are being inserted in the proper order.
+        const requirements = !value.mutationBatchLoadMode && historyItem.requires ? (
+          historyItem.requires(historyItem.args, historyItem.context)
+        ) : [];
         let historyIndexSteppedBackwardsTo = value.currentHistoryIndex + 1;
         console.groupCollapsed('%cRequirements:', 'font-weight:bold;background-color:red;padding:2px;', requirements);
         if (requirements.length > 0) {
@@ -158,7 +168,7 @@ export const HistoryStore = {
           }
           console.groupEnd();
         } else {
-          console.log('No requirements found!');
+          console.log(`No requirements found! ${value.mutationBatchLoadMode ? 'Batch load mode enabled.' : ''}`);
         }
         console.log('After applying requirements:');
         console.log('\tCurrent Index:', historyIndexSteppedBackwardsTo);
