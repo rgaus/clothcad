@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  /* import { onMount, onDestroy } from 'svelte'; */
 
-  import {
-    Surface,
-  } from '$lib/core'
+  /* import { Surface } from '$lib/core' */
   import Layout from '../components/Layout.svelte';
   import AppBar from '../components/ui/AppBar.svelte';
   import Button from '../components/ui/Button.svelte';
@@ -14,8 +12,11 @@
   import Viewport from '../components/Viewport.svelte';
   import DrawingEdit from '../components/drawing-edit/DrawingEdit.svelte';
 
-  import { HistoryStore, DrawingStore, SurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import { /* HistoryStore, */ DrawingStore, /* SurfaceStore, */ PickingItemStore, ActionStore } from '$lib/stores';
 
+  import { createSurfacesFromDrawing } from '../lib/mutations/create-surfaces';
+
+  /*
   let surface: Surface;
 
   onMount(() => {
@@ -50,23 +51,23 @@
       HistoryStore.createMutation({
         name: 'Create initial surface',
         forwards: value => {
-          /* return { ...value, SurfaceStore: SurfaceStore.addItem(value.SurfaceStore, surface) }; */
-          return value;
+          return { ...value, SurfaceStore: SurfaceStore.addItem(value.SurfaceStore, surface) };
         },
         backwards: value => {
-          /* if (surface) { */
-          /*   value = { ...value, SurfaceStore: SurfaceStore.removeItem(value.SurfaceStore, surface.id)}; */
-          /* } */
-          /* surfaceA && SurfaceStore.removeItem(surfaceA); */
-          /* surfaceB && SurfaceStore.removeItem(surfaceB); */
+          if (surface) {
+            value = { ...value, SurfaceStore: SurfaceStore.removeItem(value.SurfaceStore, surface.id)};
+          }
+          surfaceA && SurfaceStore.removeItem(surfaceA);
+          surfaceB && SurfaceStore.removeItem(surfaceB);
           return value;
         },
       })();
     }
   });
   onDestroy(() => {
-    /* SurfaceStore.historyTo(0); */
+    SurfaceStore.historyTo(0);
   });
+  */
 </script>
 
 <Layout>
@@ -122,7 +123,14 @@
             text="Cancel"
           />
           <Button
-            on:click={() => DrawingStore.completeEditing($DrawingStore)}
+            on:click={() => {
+              if (!$DrawingStore.editing.enabled) {
+                return;
+              }
+
+              createSurfacesFromDrawing([$DrawingStore.editing.id]);
+              DrawingStore.cancelEditing();
+            }}
             variant="primary"
             text="Save"
           />

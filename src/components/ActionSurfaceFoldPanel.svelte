@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { SurfaceStore, FocusedSurfaceStore, HistoryStore, PickingItemStore, ActionStore } from '$lib/stores';
-  import { Surface, LinearFold } from '$lib/core';
+  import { SurfaceStore, FocusedSurfaceStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import type { Surface, LinearFold } from '$lib/core';
+  import { foldSurfaceMutation } from '$lib/mutations/surfaces';
   import Panel from './ui/Panel.svelte';
   import FoldField from './ui/FoldField.svelte';
   import RotationField from './ui/RotationField.svelte';
@@ -16,74 +17,14 @@
       if (!focusedSurface) {
         return;
       }
+      if (!focusedSurface.parentId) {
+        return;
+      }
+      if (!focusedFoldId) {
+        return;
+      }
 
-      HistoryStore.createMutation({
-        name: `Fold ${focusedSurface.name} to ${angle}deg`,
-        forwards: (storeValues, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
-          let value = storeValues.SurfaceStore;
-
-          const parentSurface = SurfaceStore.get(value, parentSurfaceId);
-          if (!parentSurface) {
-            throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
-          }
-
-          const fold = SurfaceStore.getFold(value, foldId);
-          if (!fold) {
-            throw new Error(`Cannot find fold with id ${foldId}`);
-          }
-
-          let surfaceToRotate = SurfaceStore.get(value, surfaceToRotateId);
-          if (!surfaceToRotate) {
-            throw new Error(`Cannot find surface with id ${surfaceToRotateId}`);
-          }
-
-          surfaceToRotate = Surface.rotate(
-            surfaceToRotate,
-            LinearFold.toSpacial(fold, parentSurface),
-            rotationInDegrees,
-          );
-
-          console.log('ROTATED', surfaceToRotate);
-
-          value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
-          return { ...storeValues, SurfaceStore: value };
-        },
-        backwards: (storeValues, [parentSurfaceId, foldId, surfaceToRotateId, rotationInDegrees]) => {
-          let value = storeValues.SurfaceStore;
-
-          const parentSurface = SurfaceStore.get(value, parentSurfaceId);
-          if (!parentSurface) {
-            throw new Error(`Cannot find surface with id ${parentSurfaceId}`);
-          }
-
-          const fold = SurfaceStore.getFold(value, foldId);
-          if (!fold) {
-            throw new Error(`Cannot find fold with id ${foldId}`);
-          }
-
-          let surfaceToRotate = SurfaceStore.get(value, surfaceToRotateId);
-          if (!surfaceToRotate) {
-            throw new Error(`Cannot find surface with id ${surfaceToRotateId}`);
-          }
-
-          surfaceToRotate = Surface.rotate(
-            surfaceToRotate,
-            LinearFold.toSpacial(fold, parentSurface),
-            -1 * rotationInDegrees,
-          );
-
-          value = SurfaceStore.updateItem(value, surfaceToRotate.id, surfaceToRotate);
-          return { ...storeValues, SurfaceStore: value };
-        },
-        // This is an update purely to the surface being folded and is unrelaed to the parent
-        // surface
-        requires: (args) => [
-          {operation: 'update', item: {itemType: 'surface', itemId: args[2]}},
-        ],
-        provides: (args) => [
-          {operation: 'update', item: {itemType: 'surface', itemId: args[2]}},
-        ],
-      })(focusedSurface.parentId, focusedFoldId, focusedSurface.id, angle);
+      foldSurfaceMutation([focusedSurface.parentId, focusedFoldId, focusedSurface.id, angle]);
     });
 
     unsubscribeFocusedSurface = FocusedSurfaceStore.subscribe(surface => {

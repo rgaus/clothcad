@@ -1,12 +1,21 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { SurfaceStore, FocusedSurfaceStore, HistoryStore, FocusedItemStore, PickingItemStore, ActionStore } from '$lib/stores';
+  import {
+    FocusedSurfaceStore,
+    FocusedItemStore,
+    PickingItemStore,
+    ActionStore,
+    DrawingStore,
+    FocusedDrawingSurfaceIdStore,
+  } from '$lib/stores';
   import type { Surface } from '$lib/core';
+  import { colorSurfaceMutation, renameSurfaceMutation } from '$lib/mutations/surfaces';
 
   import Panel from './ui/Panel.svelte';
   import PanelBody from './ui/PanelBody.svelte';
   import ColorFamilyField from './ui/ColorFamilyField.svelte';
   import TextField from './ui/TextField.svelte';
+  import Button from './ui/Button.svelte';
   import ButtonGroup from './ui/ButtonGroup.svelte';
 
   let focusedSurface: Surface | null;
@@ -50,33 +59,7 @@
               return;
             }
 
-            HistoryStore.createMutation({
-              name: `Color ${focusedSurface.name} ${colorFamily}`,
-              forwards: (value, [surfaceId]) => {
-                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
-                  return {
-                    ...surface,
-                    colorFamily,
-                  };
-                });
-                return { ...value, SurfaceStore: newValue };
-              },
-              backwards: (value, [surfaceId]) => {
-                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
-                  return {
-                    ...surface,
-                    colorFamily: originalColorFamily,
-                  };
-                });
-                return { ...value, SurfaceStore: newValue };
-              },
-              requires: (args) => [
-                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
-              ],
-              provides: (args) => [
-                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
-              ],
-            })(focusedSurface.id);
+            colorSurfaceMutation([focusedSurface.id, colorFamily]);
           }}
         />
         <TextField
@@ -98,36 +81,23 @@
               return;
             }
 
-            HistoryStore.createMutation({
-              name: `Rename to ${name}`,
-              forwards: (value, [surfaceId]) => {
-                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
-                  return {
-                    ...surface,
-                    name,
-                  };
-                });
-                return { ...value, SurfaceStore: newValue };
-              },
-              backwards: (value, [surfaceId]) => {
-                const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
-                  return {
-                    ...surface,
-                    name: originalName,
-                  };
-                });
-                return { ...value, SurfaceStore: newValue };
-              },
-              requires: (args) => [
-                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
-              ],
-              provides: (args) => [
-                {operation: 'update', item: {itemType: 'surface', itemId: args[0]}},
-              ],
-            })(focusedSurface.id);
+            renameSurfaceMutation([focusedSurface.id, name]);
           }}
         />
       </ButtonGroup>
+      <Button on:click={() => {
+        if (!focusedSurface) {
+          return;
+        }
+        const result = DrawingStore.getContainingSurface($DrawingStore, focusedSurface.id);
+        if (result) {
+          const [drawing, drawingSurface] = result;
+          DrawingStore.set(
+            DrawingStore.beginEditing($DrawingStore, drawing.id)
+          );
+          FocusedDrawingSurfaceIdStore.set(drawingSurface.id);
+        }
+      }}>Open Drawing</Button>
       <h3>Points</h3>
       <ul>
         {#each focusedSurface.face.points as point}

@@ -4,7 +4,8 @@
   import { SurfaceStore, DrawingStore, HistoryStore, HighlightedItemStore, PickingItemStore, FocusedItemStore, ActionStore } from '$lib/stores';
   import type { HistoryListItem } from '$lib/stores/HistoryStore';
 
-  import { Drawing, DEFAULT_DRAWING_SCALE, DEFAULT_DRAWING_THICKNESS } from '$lib/core';
+  import { createSampleDrawingMutation, createDrawingMutation } from '$lib/mutations/drawings';
+  import { toggleSurfaceVisibilityMutation } from '$lib/mutations/surfaces';
 
   import Panel from './ui/Panel.svelte';
   import TextField from './ui/TextField.svelte';
@@ -17,7 +18,6 @@
   let activeTab: TabItem = 'drawing';
 
   let focusedHistoryItemId: HistoryListItem['id'] | null = null;
-  let highlightedHistoryItemId: HistoryListItem['id'] | null = null;
   let focusedHistoryItemName = '';
 
   FocusedItemStore.subscribe(focusedItem => {
@@ -27,33 +27,7 @@
   });
 
   function createSample() {
-    const mutation = HistoryStore.createMutation<[], {drawingId: Drawing['id']}>({
-      name: "Create drawing",
-      forwards: (storeValues, _args, context) => {
-        let drawingStoreValue = storeValues.DrawingStore;
-        const drawing = Drawing.createSample();
-        if (context.drawingId) {
-          drawing.id = context.drawingId;
-        } else {
-          context.drawingId = drawing.id;
-        }
-        drawingStoreValue = DrawingStore.addItem(drawingStoreValue, drawing);
-        return { ...storeValues, DrawingStore: drawingStoreValue };
-      },
-      backwards: (storeValues, _args, context) => {
-        let drawingStoreValue = storeValues.DrawingStore;
-        if (!context.drawingId) {
-          throw new Error(`Error creating drawing: context.drawingId was not set, this should not happen!`);
-        }
-        drawingStoreValue = DrawingStore.removeItem(drawingStoreValue, context.drawingId);
-        return { ...storeValues, DrawingStore: drawingStoreValue };
-      },
-      provides: (_args, context) => context.drawingId ? [
-        {operation: 'create', item: {itemType: 'drawing', itemId: context.drawingId}},
-        {operation: 'update', item: {itemType: 'drawing', itemId: context.drawingId}},
-      ] : [],
-    });
-    mutation();
+    createSampleDrawingMutation();
   }
   function uploadSVG() {
     const input = document.createElement('input');
@@ -70,48 +44,7 @@
       // Read file from file handle
       const reader = new FileReader();
       reader.addEventListener('load', (event) => {
-        HistoryStore.createMutation<[string, string], {drawingId: Drawing['id']}>({
-          name: `Create drawing from ${fileList[0].name}`,
-          forwards: (storeValues, [name, contents], context) => {
-            let drawingStoreValue = storeValues.DrawingStore;
-
-            const parser = new DOMParser();
-            const svgDoc = parser.parseFromString(contents, "image/svg+xml");
-
-            const drawing = Drawing.create({
-              name,
-
-              media: {
-                type: 'svg/literal',
-                scale: DEFAULT_DRAWING_SCALE,
-                thickness: DEFAULT_DRAWING_THICKNESS,
-                contents,
-                document: svgDoc,
-              },
-              surfaces: [],
-            });
-
-            if (context.drawingId) {
-              drawing.id = context.drawingId;
-            } else {
-              context.drawingId = drawing.id;
-            }
-            drawingStoreValue = DrawingStore.addItem(drawingStoreValue, drawing);
-            return { ...storeValues, DrawingStore: drawingStoreValue };
-          },
-          backwards: (storeValues, _args, context) => {
-            let drawingStoreValue = storeValues.DrawingStore;
-            if (!context.drawingId) {
-              throw new Error(`Error creating drawing: context.drawingId was not set, this should not happen!`);
-            }
-            drawingStoreValue = DrawingStore.removeItem(drawingStoreValue, context.drawingId);
-            return { ...storeValues, DrawingStore: drawingStoreValue };
-          },
-          provides: (_args, context) => context.drawingId ? [
-            {operation: 'create', item: {itemType: 'drawing', itemId: context.drawingId}},
-            {operation: 'update', item: {itemType: 'drawing', itemId: context.drawingId}},
-          ] : [],
-        })(fileList[0].name, (event.target as FixMe).result);
+        createDrawingMutation([fileList[0].name, (event.target as FixMe).result]);
       });
       reader.readAsText(fileList[0]);
     });
@@ -290,7 +223,7 @@
 
 <Panel
   width={activeTab === 'history' ? "600px" : "var(--treeview-default-width)"}
-  height="100%"
+  height="calc(100% - var(--space-10))"
   hidden={$PickingItemStore.enabled || $ActionStore.enabled || $DrawingStore?.editing?.enabled}
 >
   <div class="wrapper">
@@ -368,7 +301,8 @@
               muted
               placeholder="Search"
               on:keyup={event => {
-                const text = event?.currentTarget?.value;
+                const target = event.currentTarget;
+                const text = target.value;
                 console.log('VALUE', text)
                 if (!text) {
                   return;
@@ -403,31 +337,7 @@
                 e.preventDefault();
                 e.stopPropagation();
 
-                const initialSurfaceVisibility = surface.visible;
-
-                HistoryStore.createMutation({
-                  name: `${surface.visible ? 'Hide' : 'Show'} ${surface.name}`,
-                  forwards: (value, [surfaceId]) => {
-                    const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
-                      return {
-                        ...surface,
-                        visible: !initialSurfaceVisibility,
-                      };
-                    });
-                    return { ...value, SurfaceStore: newValue };
-                  },
-                  backwards: (value, [surfaceId]) => {
-                    const newValue = SurfaceStore.updateItem(value.SurfaceStore, surfaceId, surface => {
-                      return {
-                        ...surface,
-                        visible: initialSurfaceVisibility,
-                      };
-                    });
-                    return { ...value, SurfaceStore: newValue };
-                  },
-                  requires: () => [],
-                  provides: () => [],
-                })(surface.id);
+                toggleSurfaceVisibilityMutation([surface.id]);
               }}
             >
               <svg
@@ -511,8 +421,6 @@
             class="item"
             class:focused={$HistoryStore.currentHistoryIndex === index}
             on:click={() => HistoryStore.to(index)}
-            on:mouseenter={() => { highlightedHistoryItemId = historyItem.id; }}
-            on:mouseleave={() => { highlightedHistoryItemId = null; }}
           >
             <div class="providesRequiresBox">
               {#if historyItem.provides}

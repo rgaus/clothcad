@@ -2,22 +2,25 @@ import { writable, get } from 'svelte/store';
 
 import { Item } from '$lib/types/item';
 import type { CreatedItem, UpdatedItem, DeletedItem } from '$lib/types/item';
-import type { FixMe } from '$lib/types/fixme';
+// import type { FixMe } from '$lib/types/fixme';
 import { generateId } from '$lib/id';
+import type { DrawingSurface } from '$lib/core';
 
 import { SurfaceStore } from './SurfaceStore';
 import type { SurfaceStoreState } from './SurfaceStore';
-import { DrawingStore } from './DrawingStore';
+import { DrawingStore, FocusedDrawingSurfaceIdStore } from './DrawingStore';
 import type { DrawingStoreState } from './DrawingStore';
 
 // StoreValues ensapsulates the current state of all stores that are tracked by the HistoryStore.
 export type StoreValues = {
   SurfaceStore: SurfaceStoreState;
   DrawingStore: DrawingStoreState;
+  FocusedDrawingSurfaceIdStore: DrawingSurface['id'] | null
 };
 const getInitialStoreValues: () => StoreValues = () => ({
   SurfaceStore: get(SurfaceStore),
   DrawingStore: get(DrawingStore),
+  FocusedDrawingSurfaceIdStore: get(FocusedDrawingSurfaceIdStore),
 });
 const updateStoreValues = (initialStoreValues: StoreValues, storeValues: StoreValues) => {
   for (const [storeName, storeValue] of Object.entries(storeValues)) {
@@ -34,6 +37,12 @@ const updateStoreValues = (initialStoreValues: StoreValues, storeValues: StoreVa
           DrawingStore.set(storeValue as DrawingStoreState);
         }
         break;
+      case 'FocusedDrawingSurfaceIdStore':
+        // Only update the store if the reference changed
+        if (storeValue !== initialStoreValues.FocusedDrawingSurfaceIdStore) {
+          FocusedDrawingSurfaceIdStore.set(storeValue as StoreValues["FocusedDrawingSurfaceIdStore"]);
+        }
+        break;
       default:
         throw new Error(`Unable to find store with name ${storeName} to update!`);
     }
@@ -42,6 +51,7 @@ const updateStoreValues = (initialStoreValues: StoreValues, storeValues: StoreVa
 
 export type HistoryListItem<A = Array<any>, C = object> = {
   id: string;
+  type: string;
   name: string;
   updatedAt: string;
   forwards: (value: StoreValues, args: A, context: C) => StoreValues;
@@ -66,6 +76,10 @@ export type HistoryStoreState = {
   }>;
 };
 
+export type Mutation<A extends Array<any> = Array<any>, C = object> = (args?: A, defaultContext?: Partial<C>) => void;
+
+export const MUTATIONS: { [mutationType: string]: Mutation } = {};
+
 export const HistoryStore = {
   ...writable<HistoryStoreState>({
     history: [],
@@ -73,21 +87,22 @@ export const HistoryStore = {
     undoneHistoryItems: [],
   }),
 
-  createMutation<A extends Array<FixMe> = Array<FixMe>, C = object>(
+  createMutation<A extends Array<any> = Array<any>, C = object>(
     historyItemParams: Omit<
       HistoryListItem<A, Partial<C>>,
-      'id' | 'updatedAt' | 'args' | 'context'
-    > & { context?: Partial<C> }
-  ) {
-    return (...args: A) => {
+      'id' | 'updatedAt' | 'args' | 'context' | 'name'
+    > & { name?: string; generateDefaultName?: (args: A) => string; context?: Partial<C> }
+  ): Mutation<A, C> {
+    const mutation: Mutation<A, C> = (args=[] as unknown as A, defaultContext={}) => {
       HistoryStore.update(value => {
-        const context = historyItemParams.context || {};
+        const context = historyItemParams.context || defaultContext;
         const historyItem: HistoryListItem<A, Partial<C>> = {
           ...historyItemParams,
           id: generateId('his'),
           args,
           context,
           updatedAt: new Date().toISOString(),
+          name: historyItemParams.generateDefaultName ? historyItemParams.generateDefaultName(args) : '',
         };
         console.groupCollapsed('%cMUTATION', 'font-weight:bold;background-color:green;padding:2px;', historyItem.name);
         console.log('History Item:', historyItem);
@@ -204,6 +219,9 @@ export const HistoryStore = {
         return newHistoryValue;
       });
     };
+
+    MUTATIONS[historyItemParams.type] = mutation as Mutation;
+    return mutation;
   },
 
   // Move forward or back a set amount in history, but don't actually update the store state, ust do

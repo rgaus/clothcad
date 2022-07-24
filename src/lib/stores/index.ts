@@ -15,6 +15,7 @@ import {
   FocusedDrawingSurfaceIdStore,
   FocusedDrawingSurfaceStore,
 } from './DrawingStore';
+import { SerializationStore } from './SerializationStore';
 
 const HighlightedItemStore = {
   ...writable<Item | null>(null),
@@ -151,4 +152,5 @@ export {
   PickingItemStore,
   ActionStore,
   HistoryStore,
+  SerializationStore,
 };
