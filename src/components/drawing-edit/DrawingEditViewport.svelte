@@ -7,9 +7,19 @@
     DrawingSurface,
     DrawingSurfaceFoldSet,
     DEFAULT_DRAWING_GEOMETRY_TRANSFORM,
+    round,
   } from '$lib/core';
+  import { Numeral } from '$lib/numeral';
   import { parseSvgTransform } from '$lib/svg';
   import { Cyan2, Red4, Cyan7, Gray1, Gray10 } from '$lib/color';
+  import calculateSnappedPosition, {
+    Point2D as SnapPoint2D,
+    Line as SnapLine,
+    Rectangle as SnapRectangle,
+    Polygon as SnapPolygon,
+    distance as snapDistance,
+  } from '$lib/snap';
+  import type { Geometry as SnapGeometry, Metadata as SnapMetadata } from '$lib/snap';
 
   import DrawingEditViewportSVGLabel from './DrawingEditViewportSVGLabel.svelte';
 
@@ -134,6 +144,58 @@
   //
   //   viewportScale = scale;
   // }
+
+  let snapPoint: SnapPoint2D | null = null;
+  let snapPointMetadata: Array<SnapMetadata<SnapPoint2D>> = [];
+  function onMouseMove(event: MouseEvent) {
+    if (!$EditingDrawingStore) {
+      return;
+    }
+    const geometries = getDrawingGeometries(
+      $EditingDrawingStore.media.document,
+      $FocusedDrawingSurfaceStore,
+    ).map(drawingGeometryWithMetadata => {
+      switch (drawingGeometryWithMetadata.type) {
+        case 'rect':
+          return SnapRectangle.create(
+            SnapPoint2D.create(drawingGeometryWithMetadata.origin.x, drawingGeometryWithMetadata.origin.y),
+            drawingGeometryWithMetadata.width,
+            drawingGeometryWithMetadata.height,
+          );
+        case 'path':
+          return SnapPolygon.create(
+            drawingGeometryWithMetadata.segments.map(segment => [
+              SnapPoint2D.create(segment[0].x, segment[0].y),
+              SnapPoint2D.create(segment[1].x, segment[1].y),
+            ]),
+          );
+        case 'line':
+          return SnapLine.create(
+            SnapPoint2D.create(drawingGeometryWithMetadata.a.x, drawingGeometryWithMetadata.a.y),
+            SnapPoint2D.create(drawingGeometryWithMetadata.b.x, drawingGeometryWithMetadata.b.y),
+          );
+        default:
+          return null;
+      }
+    }).filter(g => g !== null) as Array<SnapGeometry<SnapPoint2D>>;
+
+    const x = ( event.clientX / viewport.zoom ) + viewport.left;
+    const y = ( event.clientY / viewport.zoom ) + viewport.top;
+
+    const [score, point, metadata] = calculateSnappedPosition(
+      SnapPoint2D.create(x, y),
+      geometries,
+      (1 / viewport.zoom) * 10
+    );
+
+    if (score > 0) {
+      snapPoint = point;
+      snapPointMetadata = metadata;
+    } else {
+      snapPoint = null;
+      snapPointMetadata = [];
+    }
+  }
 </script>
 
 <style>
@@ -189,6 +251,7 @@
           left: viewport.left + dx / viewport.zoom,
         };
       }}
+      on:mousemove={onMouseMove}
     >
       <g transform={`scale(${viewport.zoom}) translate(${-1 * viewport.left}, ${-1 * viewport.top})`}>
         {#each getDrawingGeometries($EditingDrawingStore.media.document, $FocusedDrawingSurfaceStore) as drawingGeometryWithMetadata}
@@ -212,7 +275,7 @@
               }[drawingGeometryWithMetadata.mode]}
               stroke-width={2 / viewport.zoom}
             />
-            {#if drawingGeometryWithMetadata.selector}
+            {#if drawingGeometryWithMetadata.selector && snapPointMetadata.length === 0}
               <DrawingEditViewportSVGLabel
                 x={drawingGeometryWithMetadata.origin.x}
                 y={drawingGeometryWithMetadata.origin.y}
@@ -243,7 +306,7 @@
               stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `1px` : ""}
               stroke-width={2 / viewport.zoom}
             />
-            {#if drawingGeometryWithMetadata.selector}
+            {#if drawingGeometryWithMetadata.selector && snapPointMetadata.length === 0}
               <DrawingEditViewportSVGLabel
                 x={drawingGeometryWithMetadata.segments[0][0].x}
                 y={drawingGeometryWithMetadata.segments[0][0].y}
@@ -267,13 +330,68 @@
               stroke-dasharray={drawingGeometryWithMetadata.mode === "focused-fold" ? `1px` : ""}
               stroke-width={2 / viewport.zoom}
             />
-            {#if drawingGeometryWithMetadata.selector}
+            {#if drawingGeometryWithMetadata.selector && snapPointMetadata.length === 0}
               <DrawingEditViewportSVGLabel
                 x={drawingGeometryWithMetadata.a.x}
                 y={drawingGeometryWithMetadata.a.y}
                 label={drawingGeometryWithMetadata.selector}
                 fill={Red4}
                 viewport={viewport}
+              />
+            {/if}
+          {/if}
+        {/each}
+
+        <!-- Line snapping context -->
+        {#if snapPoint}
+          <circle cx={snapPoint.x} cy={snapPoint.y} r={4 / viewport.zoom} fill={Gray10} />
+        {/if}
+        {#each snapPointMetadata as metadata }
+          {#if snapPoint && (metadata.type === 'line' || metadata.type === 'line-midpoint')}
+            {@const [dottedLine, otherLine] = snapDistance(snapPoint, metadata.line.start) < snapDistance(snapPoint, metadata.line.end) ? (
+              [SnapLine.create(snapPoint, metadata.line.start), SnapLine.create(snapPoint, metadata.line.end)]
+            ) : (
+              [SnapLine.create(snapPoint, metadata.line.end), SnapLine.create(snapPoint, metadata.line.start)]
+            )}
+            <!-- Dotted line to snap point -->
+            <line
+              x1={dottedLine.start.x}
+              y1={dottedLine.start.y}
+              x2={dottedLine.end.x}
+              y2={dottedLine.end.y}
+              stroke={Gray10}
+              stroke-width={2 / viewport.zoom}
+              stroke-dasharray={`${4 / viewport.zoom}px`}
+            />
+            <!-- Highlight the active line -->
+            <line
+              x1={metadata.line.start.x}
+              y1={metadata.line.start.y}
+              x2={metadata.line.end.x}
+              y2={metadata.line.end.y}
+              stroke={Gray10}
+              stroke-width={2 / viewport.zoom}
+            />
+            <!-- Dotted line distance label -->
+
+            {@const scaleAsNumber = Numeral.toNumber($EditingDrawingStore.media.scale)}
+            <DrawingEditViewportSVGLabel
+              x={dottedLine.mid.x}
+              y={dottedLine.mid.y}
+              label={`${round(snapDistance(dottedLine.start, dottedLine.end) / scaleAsNumber, 3)}`}
+              fill={Gray10}
+              viewport={viewport}
+              fontSize={12}
+            />
+            <!-- Other side of dotted line distance label -->
+            {#if snapDistance(otherLine.start, otherLine.end) < snapDistance(metadata.line.start, metadata.line.end)}
+              <DrawingEditViewportSVGLabel
+                x={otherLine.mid.x}
+                y={otherLine.mid.y}
+                label={`${round(snapDistance(otherLine.start, otherLine.end) / scaleAsNumber, 3)}`}
+                fill={Gray10}
+                viewport={viewport}
+                fontSize={12}
               />
             {/if}
           {/if}
