@@ -1,4 +1,5 @@
-import { parseSVG as parseSVGPath, makeAbsolute } from 'svg-path-parser';
+import svgPathParser from 'svg-path-parser';
+const { parseSVG: parseSVGPath, makeAbsolute } = svgPathParser;
 import { PlanarFace } from './planar-face';
 import { LinearFold } from './linear-fold';
 import {
